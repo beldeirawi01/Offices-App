@@ -1,0 +1,202 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  OWNER
+  TECH
+}
+
+enum JobStatus {
+  SCHEDULED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum InvoiceStatus {
+  DRAFT
+  SENT
+  PAID
+  OVERDUE
+  VOID
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+  REFUNDED
+}
+
+enum DeliveryChannel {
+  SMS
+  EMAIL
+}
+
+model Organization {
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users    User[]
+  clients  Client[]
+  jobs     Job[]
+  invoices Invoice[]
+}
+
+model User {
+  id             String       @id @default(cuid())
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  organizationId String
+  name           String
+  email          String       @unique
+  passwordHash   String
+  role           UserRole     @default(TECH)
+  phone          String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  jobs Job[] @relation("AssignedTech")
+}
+
+model Client {
+  id             String       @id @default(cuid())
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  organizationId String
+  name           String
+  email          String?
+  phone          String?
+  addressLine1   String?
+  addressLine2   String?
+  city           String?
+  state          String?
+  postalCode     String?
+  notes          String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  jobs     Job[]
+  invoices Invoice[]
+
+  @@index([organizationId])
+}
+
+model Job {
+  id             String       @id @default(cuid())
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  organizationId String
+  client         Client       @relation(fields: [clientId], references: [id])
+  clientId       String
+  assignedTech   User?        @relation("AssignedTech", fields: [assignedTechId], references: [id])
+  assignedTechId String?
+  title          String
+  jobType        String?
+  status         JobStatus    @default(SCHEDULED)
+  scheduledAt    DateTime?
+  completedAt    DateTime?
+  addressLine1   String?
+  city           String?
+  state          String?
+  postalCode     String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  voiceNotes VoiceNote[]
+  invoice    Invoice?
+
+  @@index([organizationId])
+  @@index([clientId])
+  @@index([assignedTechId])
+}
+
+model VoiceNote {
+  id             String   @id @default(cuid())
+  job            Job      @relation(fields: [jobId], references: [id])
+  jobId          String
+  audioUrl       String
+  transcript     String?
+  extractedJson  Json?
+  status         String   @default("UPLOADED") // UPLOADED, TRANSCRIBING, TRANSCRIBED, EXTRACTING, EXTRACTED, FAILED
+  errorMessage   String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model Invoice {
+  id             String        @id @default(cuid())
+  organization   Organization  @relation(fields: [organizationId], references: [id])
+  organizationId String
+  client         Client        @relation(fields: [clientId], references: [id])
+  clientId       String
+  job            Job?          @relation(fields: [jobId], references: [id])
+  jobId          String?       @unique
+  invoiceNumber  String        @unique
+  status         InvoiceStatus @default(DRAFT)
+  laborHours     Float?
+  laborRate      Float?
+  subtotal       Float         @default(0)
+  tax            Float         @default(0)
+  total          Float         @default(0)
+  notes          String?
+  dueDate        DateTime?
+  sentAt         DateTime?
+  paidAt         DateTime?
+  stripePaymentLinkId String?
+  stripePaymentLinkUrl String?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  lineItems LineItem[]
+  payments  Payment[]
+  deliveries InvoiceDelivery[]
+
+  @@index([organizationId])
+  @@index([clientId])
+}
+
+model LineItem {
+  id          String   @id @default(cuid())
+  invoice     Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  invoiceId   String
+  description String
+  quantity    Float    @default(1)
+  unitPrice   Float
+  amount      Float
+  kind        String   @default("PART") // PART or LABOR
+  createdAt   DateTime @default(now())
+
+  @@index([invoiceId])
+}
+
+model Payment {
+  id              String        @id @default(cuid())
+  invoice         Invoice       @relation(fields: [invoiceId], references: [id])
+  invoiceId       String
+  amount          Float
+  status          PaymentStatus @default(PENDING)
+  stripePaymentIntentId String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@index([invoiceId])
+}
+
+model InvoiceDelivery {
+  id        String          @id @default(cuid())
+  invoice   Invoice         @relation(fields: [invoiceId], references: [id])
+  invoiceId String
+  channel   DeliveryChannel
+  recipient String
+  success   Boolean
+  errorMessage String?
+  createdAt DateTime        @default(now())
+
+  @@index([invoiceId])
+}
