@@ -72,14 +72,20 @@ export default function RecordScreen({ route, navigation }: Props) {
 
   const pollForResult = (voiceNoteId: string) => {
     pollRef.current = setInterval(async () => {
-      const { data } = await api.get(`/voice-notes/${voiceNoteId}`);
-      if (data.status === "EXTRACTED") {
-        if (pollRef.current) clearInterval(pollRef.current);
-        navigation.replace("InvoiceReview", { voiceNoteId });
-      } else if (data.status === "FAILED") {
+      try {
+        const { data } = await api.get(`/voice-notes/${voiceNoteId}`);
+        if (data.status === "EXTRACTED") {
+          if (pollRef.current) clearInterval(pollRef.current);
+          navigation.replace("InvoiceReview", { voiceNoteId });
+        } else if (data.status === "FAILED") {
+          if (pollRef.current) clearInterval(pollRef.current);
+          setState("error");
+          setErrorMessage(data.errorMessage ?? "Processing failed.");
+        }
+      } catch (err: any) {
         if (pollRef.current) clearInterval(pollRef.current);
         setState("error");
-        setErrorMessage(data.errorMessage ?? "Processing failed.");
+        setErrorMessage(err?.response?.data?.error ?? "Lost connection while processing. Please try again.");
       }
     }, 2000);
   };

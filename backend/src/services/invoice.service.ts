@@ -25,8 +25,13 @@ export async function createDraftInvoiceFromExtraction(params: {
 
   const lineItems = [...extracted.lineItems];
 
+  // Claude is instructed to report labor in only one place, but LLM output isn't
+  // guaranteed — if it already itemized labor as a lineItem, don't also add the
+  // computed laborHours*laborRate amount on top, or the client gets billed twice.
+  const alreadyHasLaborLineItem = lineItems.some((item) => item.kind === "LABOR");
+
   const laborAmount =
-    extracted.laborHours != null && extracted.laborRate != null
+    !alreadyHasLaborLineItem && extracted.laborHours != null && extracted.laborRate != null
       ? extracted.laborHours * extracted.laborRate
       : 0;
 

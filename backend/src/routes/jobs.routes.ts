@@ -44,8 +44,22 @@ const jobSchema = z.object({
   postalCode: z.string().optional().nullable(),
 });
 
+// Confirms clientId/assignedTechId (when provided) belong to the caller's own
+// organization, so a job can't be created against another org's client or tech.
+async function assertBelongsToOrg(organizationId: string, clientId?: string, assignedTechId?: string | null) {
+  if (clientId) {
+    const client = await prisma.client.findFirst({ where: { id: clientId, organizationId } });
+    if (!client) throw new HttpError(400, "Invalid clientId");
+  }
+  if (assignedTechId) {
+    const tech = await prisma.user.findFirst({ where: { id: assignedTechId, organizationId } });
+    if (!tech) throw new HttpError(400, "Invalid assignedTechId");
+  }
+}
+
 jobsRouter.post("/", async (req, res) => {
   const body = jobSchema.parse(req.body);
+  await assertBelongsToOrg(req.auth!.organizationId, body.clientId, body.assignedTechId);
   const job = await prisma.job.create({
     data: { ...body, organizationId: req.auth!.organizationId },
   });
@@ -62,6 +76,7 @@ jobsRouter.put("/:id", async (req, res) => {
     where: { id: req.params.id, organizationId: req.auth!.organizationId },
   });
   if (!existing) throw new HttpError(404, "Job not found");
+  await assertBelongsToOrg(req.auth!.organizationId, body.clientId, body.assignedTechId);
 
   const job = await prisma.job.update({
     where: { id: req.params.id },

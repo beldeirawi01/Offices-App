@@ -94,6 +94,12 @@ invoicesRouter.post("/:id/send", async (req, res) => {
     include: { client: true },
   });
   if (!invoice) throw new HttpError(404, "Invoice not found");
+  if (invoice.status === "PAID" || invoice.status === "VOID") {
+    throw new HttpError(400, `Cannot send an invoice that is already ${invoice.status.toLowerCase()}`);
+  }
+  if (!invoice.client.email && !invoice.client.phone) {
+    throw new HttpError(400, "Client has no email or phone on file to deliver the invoice to");
+  }
 
   let paymentUrl = invoice.stripePaymentLinkUrl ?? undefined;
 
@@ -127,6 +133,11 @@ invoicesRouter.post("/:id/send", async (req, res) => {
       errorMessage: r.error,
     })),
   });
+
+  const anyDelivered = deliveryResults.some((r) => r.success);
+  if (!anyDelivered) {
+    throw new HttpError(502, "Failed to deliver the invoice over every configured channel");
+  }
 
   const updated = await prisma.invoice.update({
     where: { id: invoice.id },

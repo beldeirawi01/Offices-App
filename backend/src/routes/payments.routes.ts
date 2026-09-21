@@ -21,20 +21,41 @@ paymentsRouter.post("/webhook", async (req, res) => {
   }
 
   if (event.type === "checkout.session.completed" || event.type === "payment_intent.succeeded") {
-    const object = event.data.object as { metadata?: Record<string, string>; amount_total?: number; amount?: number };
+    const object = event.data.object as {
+      id: string;
+      metadata?: Record<string, string>;
+      amount_total?: number;
+      amount?: number;
+      payment_intent?: string | { id: string } | null;
+    };
     const invoiceId = object.metadata?.invoiceId;
-    if (invoiceId) {
-      await prisma.invoice.update({
-        where: { id: invoiceId },
-        data: { status: "PAID", paidAt: new Date() },
+    const paymentIntentId =
+      event.type === "payment_intent.succeeded"
+        ? object.id
+        : typeof object.payment_intent === "string"
+          ? object.payment_intent
+          : object.payment_intent?.id;
+
+    // Stripe retries webhook delivery on any non-2xx/timeout response, so guard
+    // against processing the same payment twice and double-inserting a Payment row.
+    if (invoiceId && paymentIntentId) {
+      const alreadyProcessed = await prisma.payment.findFirst({
+        where: { invoiceId, stripePaymentIntentId: paymentIntentId },
       });
-      await prisma.payment.create({
-        data: {
-          invoiceId,
-          amount: (object.amount_total ?? object.amount ?? 0) / 100,
-          status: "SUCCEEDED",
-        },
-      });
+      if (!alreadyProcessed) {
+        await prisma.invoice.update({
+          where: { id: invoiceId },
+          data: { status: "PAID", paidAt: new Date() },
+        });
+        await prisma.payment.create({
+          data: {
+            invoiceId,
+            amount: (object.amount_total ?? object.amount ?? 0) / 100,
+            status: "SUCCEEDED",
+            stripePaymentIntentId: paymentIntentId,
+          },
+        });
+      }
     }
   }
 

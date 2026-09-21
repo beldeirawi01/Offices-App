@@ -50,9 +50,9 @@ Return ONLY valid JSON matching this exact shape, with no markdown fences and no
 
 Rules:
 - Only include a lineItem for parts/materials/labor actually mentioned.
-- If a dollar cost is mentioned for the whole job but not itemized, put it as a single line item with kind "LABOR" and description "Labor / service call".
+- Report labor in exactly one place, never both: either laborHours + laborRate (when an hourly rate is mentioned), OR a single "kind": "LABOR" lineItem (when a flat/itemized labor cost is mentioned instead) — never populate laborHours/laborRate AND also add a separate LABOR lineItem for the same work, since that would bill the client twice for the same labor.
 - Infer quantity/unitPrice from context; default quantity to 1 if unclear.
-- laborHours and laborRate should be null if not mentioned.
+- laborHours and laborRate should be null if labor is instead captured as a lineItem (and vice versa).
 - Keep "summary" to 1-3 sentences describing the work performed, written for a client-facing invoice.
 - Never invent a customer name, part, or price that wasn't mentioned or clearly implied.`;
 
@@ -65,10 +65,14 @@ export async function extractJobDetails(transcript: string): Promise<ExtractedJo
 
   const message = await anthropic.messages.create({
     model: env.anthropicModel,
-    max_tokens: 1024,
+    max_tokens: 2048,
     system: SYSTEM_PROMPT,
     messages: [{ role: "user", content: transcript }],
   });
+
+  if (message.stop_reason === "max_tokens") {
+    throw new Error("Claude's response was truncated (hit max_tokens) before completing the JSON");
+  }
 
   const textBlock = message.content.find((block) => block.type === "text");
   if (!textBlock || textBlock.type !== "text") {
