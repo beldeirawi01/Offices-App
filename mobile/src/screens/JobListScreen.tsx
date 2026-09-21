@@ -2,7 +2,7 @@ import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useCallback, useState } from "react";
 import { useFocusEffect } from "@react-navigation/native";
 import { FlatList, RefreshControl, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { api, Job } from "../api/client";
+import { api, Job, Paginated } from "../api/client";
 import { useAuth } from "../context/AuthContext";
 import { RootStackParamList } from "../navigation/types";
 
@@ -16,8 +16,8 @@ export default function JobListScreen({ navigation }: Props) {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const { data } = await api.get<Job[]>("/jobs", { params: { mine: "true" } });
-      setJobs(data);
+      const { data } = await api.get<Paginated<Job>>("/jobs", { params: { mine: "true", pageSize: 100 } });
+      setJobs(data.data);
     } finally {
       setLoading(false);
     }
@@ -37,6 +37,10 @@ export default function JobListScreen({ navigation }: Props) {
           <Text style={styles.logout}>Log out</Text>
         </TouchableOpacity>
       </View>
+
+      <TouchableOpacity style={styles.newJobButton} onPress={() => navigation.navigate("NewJob")}>
+        <Text style={styles.newJobButtonText}>+ New unscheduled job</Text>
+      </TouchableOpacity>
 
       <FlatList
         data={jobs}
@@ -69,6 +73,14 @@ const styles = StyleSheet.create({
   header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 16 },
   title: { fontSize: 24, fontWeight: "700" },
   logout: { color: "#2563eb" },
+  newJobButton: {
+    backgroundColor: "#111827",
+    borderRadius: 10,
+    paddingVertical: 12,
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  newJobButtonText: { color: "#fff", fontWeight: "700" },
   card: {
     backgroundColor: "#fff",
     borderRadius: 10,

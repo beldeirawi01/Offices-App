@@ -73,6 +73,9 @@ model Client {
   name           String
   email          String?
   phone          String?
+  // TCPA-style consent to receive SMS at `phone`. Required before we text
+  // invoices/reminders to this number — collected explicitly, not assumed.
+  smsConsent     Boolean      @default(false)
   addressLine1   String?
   addressLine2   String?
   city           String?
@@ -138,6 +141,10 @@ model Invoice {
   job            Job?          @relation(fields: [jobId], references: [id])
   jobId          String?       @unique
   invoiceNumber  String        @unique
+  // Unguessable token used to build the client-facing invoice/payment link,
+  // so clients can view and pay without an account and without exposing the
+  // sequential/internal invoice id.
+  publicToken    String        @unique @default(cuid())
   status         InvoiceStatus @default(DRAFT)
   laborHours     Float?
   laborRate      Float?
@@ -148,6 +155,7 @@ model Invoice {
   dueDate        DateTime?
   sentAt         DateTime?
   paidAt         DateTime?
+  lastReminderAt DateTime?
   stripePaymentLinkId String?
   stripePaymentLinkUrl String?
   createdAt      DateTime      @default(now())

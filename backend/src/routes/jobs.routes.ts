@@ -7,20 +7,35 @@ import { HttpError } from "../middleware/errorHandler";
 export const jobsRouter = Router();
 jobsRouter.use(requireAuth);
 
+const MAX_PAGE_SIZE = 100;
+function parsePagination(query: Record<string, unknown>) {
+  const page = Math.max(1, parseInt(String(query.page ?? "1"), 10) || 1);
+  const pageSize = Math.min(MAX_PAGE_SIZE, Math.max(1, parseInt(String(query.pageSize ?? "25"), 10) || 25));
+  return { skip: (page - 1) * pageSize, take: pageSize, page, pageSize };
+}
+
 // Scheduling view: upcoming jobs, optionally scoped to the logged-in tech.
 jobsRouter.get("/", async (req, res) => {
   const { status, mine } = req.query;
+  const { skip, take, page, pageSize } = parsePagination(req.query as Record<string, unknown>);
 
-  const jobs = await prisma.job.findMany({
-    where: {
-      organizationId: req.auth!.organizationId,
-      ...(status ? { status: status as any } : {}),
-      ...(mine === "true" ? { assignedTechId: req.auth!.userId } : {}),
-    },
-    include: { client: true, assignedTech: true, invoice: true },
-    orderBy: { scheduledAt: "asc" },
-  });
-  res.json(jobs);
+  const where = {
+    organizationId: req.auth!.organizationId,
+    ...(status ? { status: status as any } : {}),
+    ...(mine === "true" ? { assignedTechId: req.auth!.userId } : {}),
+  };
+
+  const [jobs, total] = await Promise.all([
+    prisma.job.findMany({
+      where,
+      include: { client: true, assignedTech: true, invoice: true },
+      orderBy: { scheduledAt: "asc" },
+      skip,
+      take,
+    }),
+    prisma.job.count({ where }),
+  ]);
+  res.json({ data: jobs, pagination: { page, pageSize, total, totalPages: Math.ceil(total / pageSize) } });
 });
 
 jobsRouter.get("/:id", async (req, res) => {
@@ -37,6 +52,9 @@ const jobSchema = z.object({
   assignedTechId: z.string().optional().nullable(),
   title: z.string().min(1),
   jobType: z.string().optional().nullable(),
+  // Lets a tech starting a walk-in/unscheduled job create it directly as
+  // IN_PROGRESS instead of always defaulting to SCHEDULED.
+  status: z.enum(["SCHEDULED", "IN_PROGRESS", "COMPLETED", "CANCELLED"]).optional(),
   scheduledAt: z.coerce.date().optional().nullable(),
   addressLine1: z.string().optional().nullable(),
   city: z.string().optional().nullable(),

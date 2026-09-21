@@ -24,16 +24,29 @@ api.interceptors.response.use(
   },
 );
 
+// Separate client for unauthenticated, client-facing pages (e.g. /pay/:token).
+// No auth header, no 401-redirect-to-login — a client with no account should
+// never get bounced to the owner's login screen.
+export const publicApi = axios.create({
+  baseURL: import.meta.env.VITE_API_BASE_URL ?? "http://localhost:4000/api",
+});
+
 export interface Client {
   id: string;
   name: string;
   email?: string | null;
   phone?: string | null;
+  smsConsent?: boolean;
   addressLine1?: string | null;
   city?: string | null;
   state?: string | null;
   postalCode?: string | null;
   notes?: string | null;
+}
+
+export interface Paginated<T> {
+  data: T[];
+  pagination: { page: number; pageSize: number; total: number; totalPages: number };
 }
 
 export interface LineItem {
@@ -48,6 +61,7 @@ export interface LineItem {
 export interface Invoice {
   id: string;
   invoiceNumber: string;
+  publicToken: string;
   status: "DRAFT" | "SENT" | "PAID" | "OVERDUE" | "VOID";
   subtotal: number;
   tax: number;
@@ -67,9 +81,19 @@ export interface Job {
   jobType?: string | null;
   status: "SCHEDULED" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED";
   scheduledAt?: string | null;
+  clientId?: string;
+  assignedTechId?: string | null;
   client: Client;
   assignedTech?: { id: string; name: string } | null;
   invoice?: Invoice | null;
+}
+
+export interface Tech {
+  id: string;
+  name: string;
+  email: string;
+  role: "OWNER" | "TECH";
+  phone?: string | null;
 }
 
 export interface ReportSummary {

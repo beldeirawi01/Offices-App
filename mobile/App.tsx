@@ -6,6 +6,7 @@ import { AuthProvider, useAuth } from "./src/context/AuthContext";
 import { RootStackParamList } from "./src/navigation/types";
 import LoginScreen from "./src/screens/LoginScreen";
 import JobListScreen from "./src/screens/JobListScreen";
+import NewJobScreen from "./src/screens/NewJobScreen";
 import RecordScreen from "./src/screens/RecordScreen";
 import InvoiceReviewScreen from "./src/screens/InvoiceReviewScreen";
 
@@ -29,6 +30,7 @@ function RootNavigator() {
   return (
     <Stack.Navigator>
       <Stack.Screen name="JobList" component={JobListScreen} options={{ title: "Offices App" }} />
+      <Stack.Screen name="NewJob" component={NewJobScreen} options={{ title: "New job" }} />
       <Stack.Screen name="Record" component={RecordScreen} options={{ title: "Record job note" }} />
       <Stack.Screen
         name="InvoiceReview"

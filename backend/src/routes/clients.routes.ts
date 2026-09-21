@@ -7,25 +7,35 @@ import { HttpError } from "../middleware/errorHandler";
 export const clientsRouter = Router();
 clientsRouter.use(requireAuth);
 
+const MAX_PAGE_SIZE = 100;
+function parsePagination(query: Record<string, unknown>) {
+  const page = Math.max(1, parseInt(String(query.page ?? "1"), 10) || 1);
+  const pageSize = Math.min(MAX_PAGE_SIZE, Math.max(1, parseInt(String(query.pageSize ?? "25"), 10) || 25));
+  return { skip: (page - 1) * pageSize, take: pageSize, page, pageSize };
+}
+
 clientsRouter.get("/", async (req, res) => {
   const search = typeof req.query.search === "string" ? req.query.search : undefined;
+  const { skip, take, page, pageSize } = parsePagination(req.query as Record<string, unknown>);
 
-  const clients = await prisma.client.findMany({
-    where: {
-      organizationId: req.auth!.organizationId,
-      ...(search
-        ? {
-            OR: [
-              { name: { contains: search, mode: "insensitive" } },
-              { email: { contains: search, mode: "insensitive" } },
-              { phone: { contains: search, mode: "insensitive" } },
-            ],
-          }
-        : {}),
-    },
-    orderBy: { name: "asc" },
-  });
-  res.json(clients);
+  const where = {
+    organizationId: req.auth!.organizationId,
+    ...(search
+      ? {
+          OR: [
+            { name: { contains: search, mode: "insensitive" as const } },
+            { email: { contains: search, mode: "insensitive" as const } },
+            { phone: { contains: search, mode: "insensitive" as const } },
+          ],
+        }
+      : {}),
+  };
+
+  const [clients, total] = await Promise.all([
+    prisma.client.findMany({ where, orderBy: { name: "asc" }, skip, take }),
+    prisma.client.count({ where }),
+  ]);
+  res.json({ data: clients, pagination: { page, pageSize, total, totalPages: Math.ceil(total / pageSize) } });
 });
 
 clientsRouter.get("/:id", async (req, res) => {
@@ -44,6 +54,7 @@ const clientSchema = z.object({
   name: z.string().min(1),
   email: z.string().email().optional().nullable(),
   phone: z.string().optional().nullable(),
+  smsConsent: z.boolean().optional(),
   addressLine1: z.string().optional().nullable(),
   addressLine2: z.string().optional().nullable(),
   city: z.string().optional().nullable(),

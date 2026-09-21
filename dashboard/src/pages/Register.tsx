@@ -57,6 +57,10 @@ export default function Register() {
         <button type="submit" disabled={loading}>
           {loading ? "Creating..." : "Create account"}
         </button>
+        <p className="legal-fineprint">
+          By creating an account you agree to our <Link to="/terms">Terms of Service</Link> and{" "}
+          <Link to="/privacy">Privacy Policy</Link>.
+        </p>
         <p className="switch-link">
           Already have an account? <Link to="/login">Sign in</Link>
         </p>

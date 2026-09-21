@@ -31,4 +31,22 @@ export const env = {
 
   stripeSecretKey: process.env.STRIPE_SECRET_KEY ?? "",
   stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET ?? "",
+
+  // Comma-separated list of origins allowed to call this API (dashboard, mobile
+  // in dev). Falls back to permissive CORS only in development.
+  allowedOrigins: (process.env.ALLOWED_ORIGINS ?? "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean),
+
+  // S3-compatible object storage for voice note audio (AWS S3, Cloudflare R2,
+  // Backblaze B2, etc). If unset, falls back to local disk (dev only — do not
+  // rely on local disk in production, most hosts have ephemeral filesystems).
+  s3Bucket: process.env.S3_BUCKET ?? "",
+  s3Region: process.env.S3_REGION ?? "auto",
+  s3Endpoint: process.env.S3_ENDPOINT ?? "",
+  s3AccessKeyId: process.env.S3_ACCESS_KEY_ID ?? "",
+  s3SecretAccessKey: process.env.S3_SECRET_ACCESS_KEY ?? "",
+
+  sentryDsn: process.env.SENTRY_DSN ?? "",
 };

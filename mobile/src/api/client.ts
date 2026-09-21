@@ -58,3 +58,8 @@ export interface VoiceNote {
   errorMessage?: string | null;
   job: Job;
 }
+
+export interface Paginated<T> {
+  data: T[];
+  pagination: { page: number; pageSize: number; total: number; totalPages: number };
+}

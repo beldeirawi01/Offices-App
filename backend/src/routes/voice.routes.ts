@@ -8,16 +8,22 @@ import { HttpError } from "../middleware/errorHandler";
 import { transcribeAudio } from "../services/transcription.service";
 import { extractJobDetails } from "../services/extraction.service";
 import { createDraftInvoiceFromExtraction } from "../services/invoice.service";
+import { storeVoiceNoteAudio, getVoiceNoteAudioLocalPath, isCloudStorageConfigured, localUploadDir } from "../services/storage.service";
 
 export const voiceRouter = Router();
-voiceRouter.use(requireAuth);
+// NOTE: this router is mounted at bare "/api" in app.ts (its two routes don't
+// share a clean common prefix), so requireAuth must be attached per-route
+// below rather than as a router-wide `.use()`. A blanket `.use(requireAuth)`
+// here would intercept and 401 every "/api/*" request — including unrelated
+// routes like "/api/public/*" mounted after this one — before Express even
+// checks whether the path matches one of this router's actual routes.
 
-const uploadDir = path.join(process.cwd(), "uploads", "voice-notes");
-fs.mkdirSync(uploadDir, { recursive: true });
-
+// Multer always needs a local scratch location to receive the multipart upload;
+// when cloud storage is configured, storeVoiceNoteAudio() uploads this file to
+// S3 and deletes the local copy immediately after.
 const upload = multer({
   storage: multer.diskStorage({
-    destination: (_req, _file, cb) => cb(null, uploadDir),
+    destination: (_req, _file, cb) => cb(null, localUploadDir),
     filename: (_req, file, cb) => {
       const ext = path.extname(file.originalname) || ".m4a";
       cb(null, `${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`);
@@ -33,7 +39,7 @@ const upload = multer({
  * 3. Claude extracts structured billing fields
  * 4. A draft invoice is created for the tech to review before sending
  */
-voiceRouter.post("/jobs/:jobId/voice-notes", upload.single("audio"), async (req, res) => {
+voiceRouter.post("/jobs/:jobId/voice-notes", requireAuth, upload.single("audio"), async (req, res) => {
   if (!req.file) {
     throw new HttpError(400, "Missing audio file field 'audio'");
   }
@@ -44,10 +50,12 @@ voiceRouter.post("/jobs/:jobId/voice-notes", upload.single("audio"), async (req,
   });
   if (!job) throw new HttpError(404, "Job not found");
 
+  const stored = await storeVoiceNoteAudio(req.file.path, req.file.filename);
+
   const voiceNote = await prisma.voiceNote.create({
     data: {
       jobId: job.id,
-      audioUrl: req.file.path,
+      audioUrl: stored.storageKey,
       status: "UPLOADED",
     },
   });
@@ -56,21 +64,23 @@ voiceRouter.post("/jobs/:jobId/voice-notes", upload.single("audio"), async (req,
 
   // Process asynchronously so the tech isn't stuck waiting on-site;
   // the mobile app polls GET /voice-notes/:id for the result.
-  processVoiceNote(voiceNote.id, req.file.path, job.id, job.organizationId, job.clientId).catch((err) => {
+  processVoiceNote(voiceNote.id, stored.storageKey, job.id, job.organizationId, job.clientId).catch((err) => {
     console.error(`Voice note ${voiceNote.id} processing failed`, err);
   });
 });
 
 async function processVoiceNote(
   voiceNoteId: string,
-  filePath: string,
+  storageKey: string,
   jobId: string,
   organizationId: string,
   clientId: string,
 ) {
+  let localPath: string | null = null;
   try {
     await prisma.voiceNote.update({ where: { id: voiceNoteId }, data: { status: "TRANSCRIBING" } });
-    const transcript = await transcribeAudio(filePath);
+    localPath = await getVoiceNoteAudioLocalPath(storageKey);
+    const transcript = await transcribeAudio(localPath);
     await prisma.voiceNote.update({
       where: { id: voiceNoteId },
       data: { status: "TRANSCRIBED", transcript },
@@ -92,10 +102,15 @@ async function processVoiceNote(
       where: { id: voiceNoteId },
       data: { status: "FAILED", errorMessage: err instanceof Error ? err.message : "Unknown error" },
     });
+  } finally {
+    // If audio was downloaded from S3 into a scratch temp file, clean it up.
+    if (localPath && isCloudStorageConfigured()) {
+      fs.unlink(localPath, () => {});
+    }
   }
 }
 
-voiceRouter.get("/voice-notes/:id", async (req, res) => {
+voiceRouter.get("/voice-notes/:id", requireAuth, async (req, res) => {
   const voiceNote = await prisma.voiceNote.findFirst({
     where: { id: req.params.id, job: { organizationId: req.auth!.organizationId } },
     include: { job: { include: { invoice: { include: { lineItems: true } } } } },

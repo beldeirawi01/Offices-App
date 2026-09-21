@@ -1,5 +1,6 @@
 import { NextFunction, Request, Response } from "express";
 import { ZodError } from "zod";
+import { Sentry } from "../config/sentry";
 
 export class HttpError extends Error {
   status: number;
@@ -15,8 +16,10 @@ export function errorHandler(err: unknown, req: Request, res: Response, next: Ne
     return res.status(400).json({ error: "Validation failed", details: err.flatten() });
   }
   if (err instanceof HttpError) {
+    if (err.status >= 500) Sentry.captureException(err);
     return res.status(err.status).json({ error: err.message });
   }
   console.error(err);
+  Sentry.captureException(err);
   return res.status(500).json({ error: "Internal server error" });
 }

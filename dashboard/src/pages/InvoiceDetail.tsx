@@ -6,10 +6,13 @@ type InvoiceDetailData = Invoice & {
   deliveries: { channel: string; recipient: string; success: boolean }[];
 };
 
+const APP_BASE_URL = (import.meta.env.VITE_APP_BASE_URL as string | undefined) ?? window.location.origin;
+
 export default function InvoiceDetail() {
   const { id } = useParams();
   const [invoice, setInvoice] = useState<InvoiceDetailData | null>(null);
   const [sending, setSending] = useState(false);
+  const [voiding, setVoiding] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
   const load = () => {
@@ -32,11 +35,38 @@ export default function InvoiceDetail() {
     }
   };
 
-  if (!invoice) return <p>Loading...</p>;
+  const onVoid = async () => {
+    if (!confirm("Void this invoice? This can't be undone.")) return;
+    setVoiding(true);
+    try {
+      await api.post(`/invoices/${id}/void`);
+      load();
+    } finally {
+      setVoiding(false);
+    }
+  };
+
+  const onDownloadPdf = async () => {
+    const res = await api.get(`/invoices/${id}/pdf`, { responseType: "blob" });
+    const url = URL.createObjectURL(new Blob([res.data], { type: "application/pdf" }));
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${invoice?.invoiceNumber ?? "invoice"}.pdf`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  if (!invoice) return <p className="muted">Loading...</p>;
+
+  const publicUrl = `${APP_BASE_URL}/pay/${invoice.publicToken}`;
+  const canSend = invoice.status === "DRAFT" || invoice.status === "SENT" || invoice.status === "OVERDUE";
+  const canVoid = invoice.status !== "PAID" && invoice.status !== "VOID";
 
   return (
     <div>
-      <Link to="/invoices">← Back to invoices</Link>
+      <Link to="/invoices" className="back-link">
+        ← Back to invoices
+      </Link>
       <div className="page-header">
         <h1>{invoice.invoiceNumber}</h1>
         <span className={`badge badge-${invoice.status.toLowerCase()}`}>{invoice.status}</span>
@@ -46,28 +76,30 @@ export default function InvoiceDetail() {
         Client: <Link to={`/clients/${invoice.client.id}`}>{invoice.client.name}</Link>
       </p>
 
-      <table className="data-table">
-        <thead>
-          <tr>
-            <th>Description</th>
-            <th>Kind</th>
-            <th>Qty</th>
-            <th>Unit price</th>
-            <th>Amount</th>
-          </tr>
-        </thead>
-        <tbody>
-          {invoice.lineItems.map((item) => (
-            <tr key={item.id}>
-              <td>{item.description}</td>
-              <td>{item.kind}</td>
-              <td>{item.quantity}</td>
-              <td>${item.unitPrice.toFixed(2)}</td>
-              <td>${item.amount.toFixed(2)}</td>
+      <div className="card">
+        <table className="data-table">
+          <thead>
+            <tr>
+              <th>Description</th>
+              <th>Kind</th>
+              <th>Qty</th>
+              <th>Unit price</th>
+              <th>Amount</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {invoice.lineItems.map((item) => (
+              <tr key={item.id}>
+                <td>{item.description}</td>
+                <td>{item.kind}</td>
+                <td>{item.quantity}</td>
+                <td>${item.unitPrice.toFixed(2)}</td>
+                <td>${item.amount.toFixed(2)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
 
       <div className="invoice-totals">
         <div>
@@ -91,12 +123,37 @@ export default function InvoiceDetail() {
         </div>
       )}
 
-      {invoice.status === "DRAFT" && (
-        <button onClick={onSend} disabled={sending}>
-          {sending ? "Sending..." : "Send to client"}
+      <div className="button-row">
+        {invoice.status === "DRAFT" && (
+          <button onClick={onSend} disabled={sending}>
+            {sending ? "Sending..." : "Send to client"}
+          </button>
+        )}
+        {invoice.status === "OVERDUE" && (
+          <button onClick={onSend} disabled={sending}>
+            {sending ? "Sending..." : "Resend reminder"}
+          </button>
+        )}
+        <button className="btn-secondary" onClick={onDownloadPdf}>
+          Download PDF
         </button>
-      )}
+        {canVoid && (
+          <button className="btn-danger" onClick={onVoid} disabled={voiding}>
+            {voiding ? "Voiding..." : "Void invoice"}
+          </button>
+        )}
+      </div>
       {message && <p className="muted">{message}</p>}
+
+      {canSend && (
+        <div className="panel">
+          <h2>Client-facing link</h2>
+          <p className="muted">This is the branded page the client sees when you send this invoice.</p>
+          <a href={publicUrl} target="_blank" rel="noreferrer" className="public-link">
+            {publicUrl}
+          </a>
+        </div>
+      )}
 
       {invoice.deliveries?.length > 0 && (
         <div className="panel">

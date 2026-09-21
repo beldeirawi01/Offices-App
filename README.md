@@ -6,24 +6,25 @@ A back-office SaaS for solo and small trades businesses (HVAC, plumbing, electri
 
 ```
 backend/     Node.js/Express + TypeScript API — orchestrates the voice → transcript → invoice pipeline
-dashboard/   React + Vite owner web dashboard — scheduling, clients, invoices, reporting
+dashboard/   React + Vite owner web dashboard — scheduling, clients, invoices, reporting, team management
 mobile/      Expo (React Native) tech-facing app — record a job note, review the AI invoice, send it
 ```
 
 ## Core pipeline
 
-1. **Mobile app** — tech records a voice note on a job (`mobile/src/screens/RecordScreen.tsx`) and uploads it.
-2. **Backend API** — receives the audio (`backend/src/routes/voice.routes.ts`), orchestrates the rest:
+1. **Mobile app** — tech records a voice note on a job (`mobile/src/screens/RecordScreen.tsx`), or starts an unscheduled walk-in job on the fly (`NewJobScreen.tsx`), and uploads the recording.
+2. **Backend API** — receives the audio (`backend/src/routes/voice.routes.ts`), stores it in S3-compatible storage, and orchestrates the rest:
    - **Whisper** (`backend/src/services/transcription.service.ts`) transcribes the audio.
    - **Claude** (`backend/src/services/extraction.service.ts`) extracts structured billing fields (customer, labor, parts, cost) as JSON.
    - A draft invoice is built automatically (`backend/src/services/invoice.service.ts`).
 3. **Mobile app** — tech reviews/edits the AI-generated invoice (`InvoiceReviewScreen.tsx`) before it goes out.
-4. **Client delivery** — Twilio (SMS) + SendGrid (email) send the invoice with a Stripe payment link (`backend/src/services/notification.service.ts`, `payment.service.ts`). Stripe webhooks mark invoices paid.
-5. **Owner dashboard** — pulls from the same Postgres database for scheduling, payment tracking, client history, and reporting (revenue trends, job-type breakdown, busiest days).
+4. **Client delivery** — Twilio (SMS, only to SMS-consented clients) + SendGrid (email) send a branded, client-facing invoice page (`/pay/:token`, no login required) with a Stripe payment link. Stripe webhooks mark invoices paid.
+5. **Automated follow-up** — a background scheduler (`backend/src/services/scheduler.service.ts`) marks overdue invoices and sends payment reminders without anyone chasing clients by hand.
+6. **Owner dashboard** — scheduling, client history, invoicing (with PDF export), team management, and reporting (revenue trends, job-type breakdown, busiest days) — all backed by the same Postgres database.
 
 ## Database
 
-PostgreSQL via Prisma (`backend/prisma/schema.prisma`): `Organization`, `User` (OWNER/TECH), `Client`, `Job`, `VoiceNote`, `Invoice`, `LineItem`, `Payment`, `InvoiceDelivery`.
+PostgreSQL via Prisma (`backend/prisma/schema.prisma`): `Organization`, `User` (OWNER/TECH), `Client`, `Job`, `VoiceNote`, `Invoice`, `LineItem`, `Payment`, `InvoiceDelivery`. Migrations live in `backend/prisma/migrations/` and are committed — don't hand-edit the schema without regenerating a migration (`npm run prisma:migrate`).
 
 ## Local setup
 
@@ -33,22 +34,22 @@ PostgreSQL via Prisma (`backend/prisma/schema.prisma`): `Organization`, `User` (
 cd backend
 cp .env.example .env   # fill in DATABASE_URL, OPENAI_API_KEY, ANTHROPIC_API_KEY, Twilio/SendGrid/Stripe keys
 npm install
-npm run prisma:migrate  # creates tables
+npm run prisma:migrate  # applies the committed migrations
 npm run dev              # http://localhost:4000
 ```
 
-The voice pipeline, SMS/email delivery, and Stripe payment links each degrade gracefully (throw a clear error) if their API key isn't set, so you can run the rest of the app without every third-party integration configured.
+The voice pipeline, SMS/email delivery, Stripe payment links, S3 storage, and Sentry each degrade gracefully (local disk fallback, or a clear thrown error) if their config isn't set, so you can run the rest of the app without every third-party integration configured. **Exception:** don't rely on the local-disk fallback for voice note storage in production — see the S3 section below.
 
 ### 2. Owner dashboard
 
 ```bash
 cd dashboard
-cp .env.example .env   # VITE_API_BASE_URL, defaults to http://localhost:4000/api
+cp .env.example .env   # VITE_API_BASE_URL, VITE_APP_BASE_URL
 npm install
 npm run dev              # http://localhost:5173
 ```
 
-Register the first account from the dashboard's "Create an organization" screen — that user becomes the org's OWNER.
+Register the first account from the dashboard's "Create an organization" screen — that user becomes the org's OWNER. Invite techs from the **Team** page in the sidebar (owner-only).
 
 ### 3. Mobile app
 
@@ -58,8 +59,46 @@ npm install
 npx expo start
 ```
 
-Update `apiBaseUrl` in `mobile/app.json` to point at your backend (use your machine's LAN IP, not `localhost`, when testing on a physical device). Invite tech accounts from the owner dashboard (`Users` API) so they can log in and record jobs.
+Update `apiBaseUrl` in `mobile/app.json` to point at your backend (use your machine's LAN IP, not `localhost`, when testing on a physical device).
+
+## Running the test suite
+
+The backend has a real integration test suite (Vitest + Supertest) that runs against an actual Postgres database — not mocks — covering auth, cross-tenant isolation, invoice send/void guards, and the voice-extraction invoice logic.
+
+```bash
+cd backend
+createdb offices_app_test   # or: psql -c "CREATE DATABASE offices_app_test;"
+cp .env.example .env.test   # then point DATABASE_URL at offices_app_test — see .env.test for the shape
+DATABASE_URL=<test db url> npx prisma migrate deploy
+npm test
+```
+
+CI (`.github/workflows/backend-tests.yml`) runs this automatically against a fresh Postgres service container on every push/PR that touches `backend/`.
+
+## What's implemented vs. what still needs your action before launch
+
+**Done in code:**
+- Multi-tenant isolation checks on jobs/clients (an org can't reference another org's data)
+- Rate limiting (auth, voice uploads, public endpoints) and a locked-down CORS allowlist for production
+- Pagination on clients/jobs/invoices lists
+- Overdue invoice detection + automated payment reminders (background cron)
+- S3-compatible voice note storage (falls back to local disk only in dev)
+- Invoice PDF export + a public, no-login client-facing invoice/payment page
+- SMS consent tracking — texts are only sent to clients who've explicitly consented
+- Team management UI (invite techs from the dashboard, no more raw API calls)
+- Edit/cancel flows for clients, jobs, and invoices in the dashboard
+- "Start an unscheduled job" flow in the mobile app for walk-ins
+- Error tracking wiring (Sentry, optional via `SENTRY_DSN`)
+- A real backend test suite + CI
+
+**Needs your action, not more code:**
+- **Accounts/credentials**: production OpenAI, Anthropic, Twilio, SendGrid, Stripe, and an S3-compatible bucket (AWS S3, Cloudflare R2, Backblaze B2) — this repo only has the integration code, not the accounts.
+- **Legal review**: `dashboard/src/pages/Legal.tsx` has Terms of Service and Privacy Policy *drafts* — a lawyer needs to review and finalize these (jurisdiction, actual data practices, liability language) before they're relied upon.
+- **Twilio compliance**: complete A2P 10DLC/toll-free registration before sending SMS at volume; the app already gates SMS on a `smsConsent` flag per client, but the registration itself is done in your Twilio console.
+- **Deployment**: `render.yaml` (Render Blueprint) and `backend/Dockerfile` are ready to deploy from — you still need to connect your own Render/Railway account, and fill in the `sync: false` env vars in the dashboard after first deploy.
+- **App store submission**: `mobile/` needs an Apple Developer account and Google Play Console account, plus an EAS Build + submission run — code is ready, publishing is a manual process only you can complete.
+- **Backups**: set up automated Postgres backups on whatever host you choose (most managed Postgres offerings include this — verify it's actually turned on).
 
 ## Hosting
 
-Designed to deploy on Railway or Render for the MVP: one service for `backend` (with a managed Postgres addon), one static/site deploy for `dashboard`, and the Expo app shipped via EAS Build or Expo Go during validation.
+`render.yaml` at the repo root is a ready-to-use [Render Blueprint](https://render.com/docs/blueprint-spec) provisioning the backend (Docker), a managed Postgres instance, and the dashboard as a static site with SPA routing. For Railway, use `backend/Dockerfile` for the API service, add a Postgres plugin, and deploy `dashboard/` as a static site with `npm run build` / publish `dist/`. The Expo mobile app ships via EAS Build once you're ready for internal testing or app store submission.

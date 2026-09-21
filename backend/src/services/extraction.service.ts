@@ -84,7 +84,7 @@ export async function extractJobDetails(transcript: string): Promise<ExtractedJo
   return extractedJobSchema.parse(parsed);
 }
 
-function extractJsonFromText(text: string): string {
+export function extractJsonFromText(text: string): string {
   const trimmed = text.trim();
   const start = trimmed.indexOf("{");
   const end = trimmed.lastIndexOf("}");

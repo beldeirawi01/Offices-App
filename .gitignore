@@ -13,3 +13,4 @@ backend/uploads/
 *.pem
 .vscode/
 .idea/
+*.tsbuildinfo
