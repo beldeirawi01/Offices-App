@@ -21,7 +21,11 @@ export default function Clients() {
 
   const onCreate = async (e: FormEvent) => {
     e.preventDefault();
-    await api.post("/clients", form);
+    await api.post("/clients", {
+      name: form.name,
+      email: form.email || undefined,
+      phone: form.phone || undefined,
+    });
     setForm({ name: "", email: "", phone: "" });
     setShowForm(false);
     load();
