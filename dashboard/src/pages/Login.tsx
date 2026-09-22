@@ -42,6 +42,9 @@ export default function Login() {
           {loading ? "Signing in..." : "Sign in"}
         </button>
         <p className="switch-link">
+          <Link to="/forgot-password">Forgot password?</Link>
+        </p>
+        <p className="switch-link">
           New here? <Link to="/register">Create an organization</Link>
         </p>
       </form>

@@ -16,6 +16,7 @@ import { paymentsRouter } from "./routes/payments.routes";
 import { reportsRouter } from "./routes/reports.routes";
 import { usersRouter } from "./routes/users.routes";
 import { publicRouter } from "./routes/public.routes";
+import { organizationsRouter } from "./routes/organizations.routes";
 
 export const app = express();
 
@@ -61,6 +62,7 @@ app.use("/api", voiceRouter);
 app.use("/api/invoices", invoicesRouter);
 app.use("/api/reports", reportsRouter);
 app.use("/api/users", usersRouter);
+app.use("/api/organizations", organizationsRouter);
 app.use("/api/public", publicRouter);
 
 app.use(errorHandler);

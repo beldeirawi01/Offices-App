@@ -80,12 +80,16 @@ CI (`.github/workflows/backend-tests.yml`) runs this automatically against a fre
 **Done in code:**
 - Multi-tenant isolation checks on jobs/clients (an org can't reference another org's data)
 - Rate limiting (auth, voice uploads, public endpoints) and a locked-down CORS allowlist for production
-- Pagination on clients/jobs/invoices lists
+- Pagination and search on clients/jobs/invoices lists
 - Overdue invoice detection + automated payment reminders (background cron)
 - S3-compatible voice note storage (falls back to local disk only in dev)
 - Invoice PDF export + a public, no-login client-facing invoice/payment page
 - SMS consent tracking — texts are only sent to clients who've explicitly consented
-- Team management UI (invite techs from the dashboard, no more raw API calls)
+- Team management UI (invite **and remove** techs from the dashboard, no more raw API calls)
+- Manual invoice creation (a one-off charge or materials bill doesn't require a voice note) and manual "mark as paid" for cash/check payments collected outside Stripe
+- Configurable per-organization sales tax rate (Settings page)
+- Change password + forgot/reset password (emailed link) — full account recovery, not just initial login
+- Job detail page tying together a job's info, assigned tech, voice notes/transcript, and invoice in one view
 - Edit/cancel flows for clients, jobs, and invoices in the dashboard
 - "Start an unscheduled job" flow in the mobile app for walk-ins
 - Error tracking wiring (Sentry, optional via `SENTRY_DSN`)

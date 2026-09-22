@@ -75,17 +75,36 @@ export interface Invoice {
   lineItems: LineItem[];
 }
 
+export interface VoiceNote {
+  id: string;
+  status: string;
+  transcript?: string | null;
+  errorMessage?: string | null;
+  createdAt: string;
+}
+
 export interface Job {
   id: string;
   title: string;
   jobType?: string | null;
   status: "SCHEDULED" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED";
   scheduledAt?: string | null;
+  addressLine1?: string | null;
+  city?: string | null;
+  state?: string | null;
+  postalCode?: string | null;
   clientId?: string;
   assignedTechId?: string | null;
   client: Client;
   assignedTech?: { id: string; name: string } | null;
   invoice?: Invoice | null;
+  voiceNotes?: VoiceNote[];
+}
+
+export interface Organization {
+  id: string;
+  name: string;
+  taxRate: number;
 }
 
 export interface Tech {

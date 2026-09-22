@@ -122,10 +122,22 @@ button:disabled {
   margin: 16px 0;
 }
 
+.header-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.nested-panel {
+  margin-top: 12px;
+}
+
 /* ---------- Form controls ---------- */
 
 input,
-select {
+select,
+textarea {
   padding: 9px 12px;
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-sm);
@@ -135,8 +147,14 @@ select {
   font-family: inherit;
 }
 
+textarea {
+  resize: vertical;
+  width: 100%;
+}
+
 input:focus,
-select:focus {
+select:focus,
+textarea:focus {
   outline: none;
   border-color: var(--primary);
   box-shadow: 0 0 0 3px var(--primary-light);
@@ -793,5 +811,40 @@ p.small {
   }
   .stat-grid {
     grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* ---------- Line item editor (New Invoice) ---------- */
+
+.line-items-header,
+.line-item-row {
+  display: grid;
+  grid-template-columns: 1fr 70px 100px 90px 80px;
+  gap: 8px;
+  align-items: center;
+}
+
+.line-items-header {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0 0 6px;
+}
+
+.line-item-row {
+  margin-bottom: 8px;
+}
+
+@media (max-width: 640px) {
+  .line-items-header {
+    display: none;
+  }
+  .line-item-row {
+    grid-template-columns: 1fr;
+    background: var(--surface-sunken);
+    padding: 10px;
+    border-radius: var(--radius-sm);
   }
 }

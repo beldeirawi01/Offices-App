@@ -7,6 +7,7 @@ import { env } from "../config/env";
 import { createPaymentLinkForInvoice } from "../services/payment.service";
 import { deliverInvoiceToClient } from "../services/notification.service";
 import { renderInvoicePdf } from "../services/pdf.service";
+import { createInvoiceFromLineItems, DraftLineItem } from "../services/invoice.service";
 
 export const invoicesRouter = Router();
 invoicesRouter.use(requireAuth);
@@ -19,11 +20,19 @@ function parsePagination(query: Record<string, unknown>) {
 }
 
 invoicesRouter.get("/", async (req, res) => {
-  const { status } = req.query;
+  const { status, search } = req.query;
   const { skip, take, page, pageSize } = parsePagination(req.query as Record<string, unknown>);
   const where = {
     organizationId: req.auth!.organizationId,
     ...(status ? { status: status as any } : {}),
+    ...(typeof search === "string" && search
+      ? {
+          OR: [
+            { invoiceNumber: { contains: search, mode: "insensitive" as const } },
+            { client: { name: { contains: search, mode: "insensitive" as const } } },
+          ],
+        }
+      : {}),
   };
   const [invoices, total] = await Promise.all([
     prisma.invoice.findMany({
@@ -81,6 +90,42 @@ const lineItemSchema = z.object({
   kind: z.enum(["PART", "LABOR"]),
 });
 
+const invoiceCreateSchema = z.object({
+  clientId: z.string(),
+  jobId: z.string().optional().nullable(),
+  lineItems: z.array(lineItemSchema).min(1, "Add at least one line item"),
+  notes: z.string().optional().nullable(),
+  dueDate: z.coerce.date().optional().nullable(),
+});
+
+// Manual invoice creation — for one-off charges, materials-only bills, or
+// testing, without needing a voice note to have been recorded and processed.
+invoicesRouter.post("/", async (req, res) => {
+  const body = invoiceCreateSchema.parse(req.body);
+  const organizationId = req.auth!.organizationId;
+
+  const client = await prisma.client.findFirst({ where: { id: body.clientId, organizationId } });
+  if (!client) throw new HttpError(400, "Invalid clientId");
+
+  if (body.jobId) {
+    const job = await prisma.job.findFirst({ where: { id: body.jobId, organizationId } });
+    if (!job) throw new HttpError(400, "Invalid jobId");
+    const existingInvoice = await prisma.invoice.findUnique({ where: { jobId: body.jobId } });
+    if (existingInvoice) throw new HttpError(400, "This job already has an invoice");
+  }
+
+  const invoice = await createInvoiceFromLineItems({
+    organizationId,
+    clientId: body.clientId,
+    jobId: body.jobId,
+    lineItems: body.lineItems as DraftLineItem[],
+    notes: body.notes,
+    dueDate: body.dueDate,
+  });
+
+  res.status(201).json(invoice);
+});
+
 const invoiceUpdateSchema = z.object({
   notes: z.string().optional().nullable(),
   dueDate: z.coerce.date().optional().nullable(),
@@ -112,8 +157,12 @@ invoicesRouter.put("/:id", async (req, res) => {
     });
   }
 
-  const lineItems = await prisma.lineItem.findMany({ where: { invoiceId: existing.id } });
+  const [lineItems, org] = await Promise.all([
+    prisma.lineItem.findMany({ where: { invoiceId: existing.id } }),
+    prisma.organization.findUniqueOrThrow({ where: { id: req.auth!.organizationId } }),
+  ]);
   const subtotal = lineItems.reduce((sum, item) => sum + item.amount, 0);
+  const tax = subtotal * org.taxRate;
 
   const invoice = await prisma.invoice.update({
     where: { id: existing.id },
@@ -121,7 +170,8 @@ invoicesRouter.put("/:id", async (req, res) => {
       notes: body.notes ?? existing.notes,
       dueDate: body.dueDate ?? existing.dueDate,
       subtotal,
-      total: subtotal + existing.tax,
+      tax,
+      total: subtotal + tax,
     },
     include: { lineItems: true },
   });
@@ -205,7 +255,37 @@ invoicesRouter.post("/:id/void", async (req, res) => {
     where: { id: req.params.id, organizationId: req.auth!.organizationId },
   });
   if (!existing) throw new HttpError(404, "Invoice not found");
+  if (existing.status === "PAID") {
+    throw new HttpError(400, "Cannot void an invoice that has already been paid");
+  }
+  if (existing.status === "VOID") {
+    throw new HttpError(400, "Invoice is already void");
+  }
 
   const invoice = await prisma.invoice.update({ where: { id: existing.id }, data: { status: "VOID" } });
+  res.json(invoice);
+});
+
+// Marks an invoice paid outside Stripe — cash, check, or any other method the
+// owner collected payment through directly.
+invoicesRouter.post("/:id/mark-paid", async (req, res) => {
+  const existing = await prisma.invoice.findFirst({
+    where: { id: req.params.id, organizationId: req.auth!.organizationId },
+  });
+  if (!existing) throw new HttpError(404, "Invoice not found");
+  if (existing.status === "PAID") throw new HttpError(400, "Invoice is already paid");
+  if (existing.status === "VOID") throw new HttpError(400, "Cannot mark a voided invoice as paid");
+
+  const [invoice] = await prisma.$transaction([
+    prisma.invoice.update({
+      where: { id: existing.id },
+      data: { status: "PAID", paidAt: new Date() },
+      include: { lineItems: true },
+    }),
+    prisma.payment.create({
+      data: { invoiceId: existing.id, amount: existing.total, status: "SUCCEEDED" },
+    }),
+  ]);
+
   res.json(invoice);
 });

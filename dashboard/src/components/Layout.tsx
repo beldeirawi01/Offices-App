@@ -19,6 +19,7 @@ export default function Layout() {
           <NavLink to="/clients">Clients</NavLink>
           <NavLink to="/invoices">Invoices</NavLink>
           <NavLink to="/team">Team</NavLink>
+          <NavLink to="/settings">Settings</NavLink>
         </nav>
         <div className="sidebar-footer">
           <div className="user-info">

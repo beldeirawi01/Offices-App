@@ -12,6 +12,7 @@ export default function Team() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [removingId, setRemovingId] = useState<string | null>(null);
 
   const load = () => {
     setLoading(true);
@@ -36,6 +37,19 @@ export default function Team() {
       setError(err?.response?.data?.error ?? "Could not add team member");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const onRemove = async (tech: Tech) => {
+    if (!confirm(`Remove ${tech.name} from the team? Any jobs assigned to them will become unassigned.`)) return;
+    setRemovingId(tech.id);
+    try {
+      await api.delete(`/users/${tech.id}`);
+      load();
+    } catch (err: any) {
+      alert(err?.response?.data?.error ?? "Could not remove this team member");
+    } finally {
+      setRemovingId(null);
     }
   };
 
@@ -112,6 +126,7 @@ export default function Team() {
                 <th>Email</th>
                 <th>Role</th>
                 <th>Phone</th>
+                {user?.role === "OWNER" && <th></th>}
               </tr>
             </thead>
             <tbody>
@@ -123,6 +138,20 @@ export default function Team() {
                     <span className={`badge ${t.role === "OWNER" ? "badge-paid" : "badge-scheduled"}`}>{t.role}</span>
                   </td>
                   <td>{t.phone ?? "—"}</td>
+                  {user?.role === "OWNER" && (
+                    <td>
+                      {t.id !== user.id && (
+                        <button
+                          type="button"
+                          className="btn-danger"
+                          onClick={() => onRemove(t)}
+                          disabled={removingId === t.id}
+                        >
+                          {removingId === t.id ? "Removing..." : "Remove"}
+                        </button>
+                      )}
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>

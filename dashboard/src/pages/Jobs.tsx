@@ -140,7 +140,9 @@ export default function Jobs() {
               <tbody>
                 {jobs.map((j) => (
                   <tr key={j.id}>
-                    <td>{j.title}</td>
+                    <td>
+                      <Link to={`/jobs/${j.id}`}>{j.title}</Link>
+                    </td>
                     <td>
                       <Link to={`/clients/${j.client.id}`}>{j.client.name}</Link>
                     </td>

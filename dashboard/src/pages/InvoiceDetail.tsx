@@ -13,6 +13,7 @@ export default function InvoiceDetail() {
   const [invoice, setInvoice] = useState<InvoiceDetailData | null>(null);
   const [sending, setSending] = useState(false);
   const [voiding, setVoiding] = useState(false);
+  const [markingPaid, setMarkingPaid] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
   const load = () => {
@@ -43,6 +44,19 @@ export default function InvoiceDetail() {
       load();
     } finally {
       setVoiding(false);
+    }
+  };
+
+  const onMarkPaid = async () => {
+    if (!confirm("Mark this invoice as paid? Use this only if the client paid outside Stripe (cash, check, etc).")) return;
+    setMarkingPaid(true);
+    try {
+      await api.post(`/invoices/${id}/mark-paid`);
+      load();
+    } catch (err: any) {
+      setMessage(err?.response?.data?.error ?? "Could not mark invoice as paid");
+    } finally {
+      setMarkingPaid(false);
     }
   };
 
@@ -137,6 +151,11 @@ export default function InvoiceDetail() {
         <button className="btn-secondary" onClick={onDownloadPdf}>
           Download PDF
         </button>
+        {(invoice.status === "SENT" || invoice.status === "OVERDUE") && (
+          <button className="btn-secondary" onClick={onMarkPaid} disabled={markingPaid}>
+            {markingPaid ? "Saving..." : "Mark as paid (cash/check)"}
+          </button>
+        )}
         {canVoid && (
           <button className="btn-danger" onClick={onVoid} disabled={voiding}>
             {voiding ? "Voiding..." : "Void invoice"}
