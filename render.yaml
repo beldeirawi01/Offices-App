@@ -2,12 +2,12 @@
 #
 # One-click starting point for deploying this app on Render. After deploying:
 #  1. Fill in the env vars marked `sync: false` in the Render dashboard
-#     (API keys for OpenAI/Anthropic/Twilio/SendGrid/Stripe, S3 credentials).
+#     (API keys for OpenAI/Anthropic/Twilio/Brevo/Stripe, S3 credentials).
 #  2. Update ALLOWED_ORIGINS on the backend once the dashboard's real URL is known.
 #  3. Update VITE_API_BASE_URL on the dashboard once the backend's real URL is known.
 #
 # This does NOT configure S3/R2 for voice note storage or any of the third-party
-# provider accounts (Stripe, Twilio, SendGrid, OpenAI, Anthropic) — those are
+# provider accounts (Stripe, Twilio, Brevo, OpenAI, Anthropic) — those are
 # your accounts to create; only the credentials plug in here.
 
 databases:
@@ -49,9 +49,9 @@ services:
         sync: false
       - key: TWILIO_FROM_NUMBER
         sync: false
-      - key: SENDGRID_API_KEY
+      - key: BREVO_API_KEY
         sync: false
-      - key: SENDGRID_FROM_EMAIL
+      - key: BREVO_FROM_EMAIL
         sync: false
       - key: STRIPE_SECRET_KEY
         sync: false

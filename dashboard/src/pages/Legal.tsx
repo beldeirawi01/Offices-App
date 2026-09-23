@@ -92,13 +92,13 @@ export function PrivacyPolicy() {
         <h2>2. How we use it</h2>
         <p>
           To provide the Service: transcribing voice notes (via OpenAI Whisper), extracting billing details (via
-          Anthropic's Claude), sending invoices (via Twilio and SendGrid), and processing payments (via Stripe).
+          Anthropic's Claude), sending invoices (via Twilio and Brevo), and processing payments (via Stripe).
         </p>
 
         <h2>3. Third-party processors</h2>
         <p>
           Voice audio and transcripts are sent to OpenAI and Anthropic for processing. Contact info is sent to
-          Twilio (SMS) and SendGrid (email) only when you send an invoice or reminder. Payment details are
+          Twilio (SMS) and Brevo (email) only when you send an invoice or reminder. Payment details are
           handled entirely by Stripe.
         </p>
 

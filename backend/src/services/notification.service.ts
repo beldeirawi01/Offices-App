@@ -1,5 +1,4 @@
 import twilio from "twilio";
-import sgMail from "@sendgrid/mail";
 import { env } from "../config/env";
 
 let twilioClient: ReturnType<typeof twilio> | null = null;
@@ -24,11 +23,29 @@ export async function sendSms(params: { to: string; body: string }) {
 }
 
 export async function sendEmail(params: { to: string; subject: string; text: string; html: string }) {
-  if (!env.sendgridApiKey) {
-    throw new Error("SendGrid API key is not configured");
+  if (!env.brevoApiKey) {
+    throw new Error("Brevo API key is not configured");
   }
-  sgMail.setApiKey(env.sendgridApiKey);
-  return sgMail.send({ to: params.to, from: env.sendgridFromEmail, subject: params.subject, text: params.text, html: params.html });
+  const response = await fetch("https://api.brevo.com/v3/smtp/email", {
+    method: "POST",
+    headers: {
+      "api-key": env.brevoApiKey,
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    },
+    body: JSON.stringify({
+      sender: { email: env.brevoFromEmail },
+      to: [{ email: params.to }],
+      subject: params.subject,
+      textContent: params.text,
+      htmlContent: params.html,
+    }),
+  });
+  if (!response.ok) {
+    const body = await response.text();
+    throw new Error(`Brevo email send failed (${response.status}): ${body}`);
+  }
+  return response.json();
 }
 
 type DeliveryResult = { channel: "SMS" | "EMAIL"; recipient: string; success: boolean; error?: string };

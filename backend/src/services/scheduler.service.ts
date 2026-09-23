@@ -63,7 +63,7 @@ async function sendOverdueReminders() {
 }
 
 /**
- * Starts the background jobs. Skipped automatically if Twilio/SendGrid
+ * Starts the background jobs. Skipped automatically if Twilio/Brevo
  * aren't configured for reminders — overdue marking still runs regardless,
  * since it's just a status flip with no external dependency.
  */

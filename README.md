@@ -18,7 +18,7 @@ mobile/      Expo (React Native) tech-facing app — record a job note, review t
    - **Claude** (`backend/src/services/extraction.service.ts`) extracts structured billing fields (customer, labor, parts, cost) as JSON.
    - A draft invoice is built automatically (`backend/src/services/invoice.service.ts`).
 3. **Mobile app** — tech reviews/edits the AI-generated invoice (`InvoiceReviewScreen.tsx`) before it goes out.
-4. **Client delivery** — Twilio (SMS, only to SMS-consented clients) + SendGrid (email) send a branded, client-facing invoice page (`/pay/:token`, no login required) with a Stripe payment link. Stripe webhooks mark invoices paid.
+4. **Client delivery** — Twilio (SMS, only to SMS-consented clients) + Brevo (email) send a branded, client-facing invoice page (`/pay/:token`, no login required) with a Stripe payment link. Stripe webhooks mark invoices paid.
 5. **Automated follow-up** — a background scheduler (`backend/src/services/scheduler.service.ts`) marks overdue invoices and sends payment reminders without anyone chasing clients by hand.
 6. **Owner dashboard** — scheduling, client history, invoicing (with PDF export), team management, and reporting (revenue trends, job-type breakdown, busiest days) — all backed by the same Postgres database.
 
@@ -32,7 +32,7 @@ PostgreSQL via Prisma (`backend/prisma/schema.prisma`): `Organization`, `User` (
 
 ```bash
 cd backend
-cp .env.example .env   # fill in DATABASE_URL, OPENAI_API_KEY, ANTHROPIC_API_KEY, Twilio/SendGrid/Stripe keys
+cp .env.example .env   # fill in DATABASE_URL, OPENAI_API_KEY, ANTHROPIC_API_KEY, Twilio/Brevo/Stripe keys
 npm install
 npm run prisma:migrate  # applies the committed migrations
 npm run dev              # http://localhost:4000
@@ -96,7 +96,7 @@ CI (`.github/workflows/backend-tests.yml`) runs this automatically against a fre
 - A real backend test suite + CI
 
 **Needs your action, not more code:**
-- **Accounts/credentials**: production OpenAI, Anthropic, Twilio, SendGrid, Stripe, and an S3-compatible bucket (AWS S3, Cloudflare R2, Backblaze B2) — this repo only has the integration code, not the accounts.
+- **Accounts/credentials**: production OpenAI, Anthropic, Twilio, Brevo, Stripe, and an S3-compatible bucket (AWS S3, Cloudflare R2, Backblaze B2) — this repo only has the integration code, not the accounts.
 - **Legal review**: `dashboard/src/pages/Legal.tsx` has Terms of Service and Privacy Policy *drafts* — a lawyer needs to review and finalize these (jurisdiction, actual data practices, liability language) before they're relied upon.
 - **Twilio compliance**: complete A2P 10DLC/toll-free registration before sending SMS at volume; the app already gates SMS on a `smsConsent` flag per client, but the registration itself is done in your Twilio console.
 - **Deployment**: `render.yaml` (Render Blueprint) and `backend/Dockerfile` are ready to deploy from — you still need to connect your own Render/Railway account, and fill in the `sync: false` env vars in the dashboard after first deploy.

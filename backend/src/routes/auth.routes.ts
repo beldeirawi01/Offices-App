@@ -107,7 +107,7 @@ authRouter.post("/forgot-password", async (req, res) => {
       });
     } catch (err) {
       // Don't leak delivery failures to the caller — same reasoning as above —
-      // but log it so a misconfigured SENDGRID_API_KEY is visible server-side.
+      // but log it so a misconfigured BREVO_API_KEY is visible server-side.
       console.error("Failed to send password reset email", err);
     }
   }
