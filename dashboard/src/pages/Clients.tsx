@@ -2,10 +2,15 @@ import { FormEvent, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api, Client, Paginated } from "../api/client";
 import Pagination from "../components/Pagination";
+import EmptyState from "../components/EmptyState";
+import Spinner from "../components/Spinner";
+import { useToast } from "../components/Toast";
+import { PlusIcon } from "../components/Icons";
 
 const emptyForm = { name: "", email: "", phone: "", smsConsent: false };
 
 export default function Clients() {
+  const toast = useToast();
   const [clients, setClients] = useState<Client[]>([]);
   const [pagination, setPagination] = useState({ page: 1, totalPages: 1 });
   const [search, setSearch] = useState("");
@@ -36,6 +41,7 @@ export default function Clients() {
     });
     setForm(emptyForm);
     setShowForm(false);
+    toast.success("Client added.");
     load(1);
   };
 
@@ -46,7 +52,9 @@ export default function Clients() {
           <h1>Clients</h1>
           <p className="page-subtitle">Every customer you've done work for, in one place.</p>
         </div>
-        <button onClick={() => setShowForm((v) => !v)}>{showForm ? "Cancel" : "+ New client"}</button>
+        <button onClick={() => setShowForm((v) => !v)}>
+          {showForm ? "Cancel" : <><PlusIcon /> New client</>}
+        </button>
       </div>
 
       {showForm && (
@@ -93,7 +101,19 @@ export default function Clients() {
       />
 
       {loading ? (
-        <p className="muted">Loading...</p>
+        <Spinner label="Loading clients..." />
+      ) : clients.length === 0 ? (
+        <EmptyState
+          title={search ? "No matching clients" : "No clients yet"}
+          message={search ? "Try a different search term." : "Add your first client to get started."}
+          action={
+            !search && (
+              <button onClick={() => setShowForm(true)}>
+                <PlusIcon /> New client
+              </button>
+            )
+          }
+        />
       ) : (
         <>
           <div className="card">
@@ -115,13 +135,6 @@ export default function Clients() {
                     <td>{c.phone ?? "—"}</td>
                   </tr>
                 ))}
-                {clients.length === 0 && (
-                  <tr>
-                    <td colSpan={3} className="muted empty-cell">
-                      No clients yet — add your first one above.
-                    </td>
-                  </tr>
-                )}
               </tbody>
             </table>
           </div>

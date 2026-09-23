@@ -2,10 +2,15 @@ import { FormEvent, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api, Client, Job, Paginated, Tech } from "../api/client";
 import Pagination from "../components/Pagination";
+import EmptyState from "../components/EmptyState";
+import Spinner from "../components/Spinner";
+import { useToast } from "../components/Toast";
+import { PlusIcon } from "../components/Icons";
 
 const STATUS_OPTIONS: Job["status"][] = ["SCHEDULED", "IN_PROGRESS", "COMPLETED", "CANCELLED"];
 
 export default function Jobs() {
+  const toast = useToast();
   const [jobs, setJobs] = useState<Job[]>([]);
   const [pagination, setPagination] = useState({ page: 1, totalPages: 1 });
   const [clients, setClients] = useState<Client[]>([]);
@@ -43,6 +48,7 @@ export default function Jobs() {
     });
     setForm({ clientId: "", title: "", jobType: "", scheduledAt: "", assignedTechId: "" });
     setShowForm(false);
+    toast.success("Job scheduled.");
     load(1);
   };
 
@@ -63,7 +69,9 @@ export default function Jobs() {
           <h1>Scheduling</h1>
           <p className="page-subtitle">Upcoming and past jobs across your whole team.</p>
         </div>
-        <button onClick={() => setShowForm((v) => !v)}>{showForm ? "Cancel" : "+ New job"}</button>
+        <button onClick={() => setShowForm((v) => !v)}>
+          {showForm ? "Cancel" : <><PlusIcon /> New job</>}
+        </button>
       </div>
 
       {showForm && (
@@ -122,7 +130,17 @@ export default function Jobs() {
       )}
 
       {loading ? (
-        <p className="muted">Loading...</p>
+        <Spinner label="Loading jobs..." />
+      ) : jobs.length === 0 ? (
+        <EmptyState
+          title="No jobs yet"
+          message="Schedule your first job to get started."
+          action={
+            <button onClick={() => setShowForm(true)}>
+              <PlusIcon /> New job
+            </button>
+          }
+        />
       ) : (
         <>
           <div className="card">
@@ -171,13 +189,6 @@ export default function Jobs() {
                     </td>
                   </tr>
                 ))}
-                {jobs.length === 0 && (
-                  <tr>
-                    <td colSpan={6} className="muted empty-cell">
-                      No jobs yet — schedule your first one above.
-                    </td>
-                  </tr>
-                )}
               </tbody>
             </table>
           </div>

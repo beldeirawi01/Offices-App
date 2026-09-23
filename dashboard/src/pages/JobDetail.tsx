@@ -1,12 +1,17 @@
 import { FormEvent, useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { api, Client, Job, Paginated, Tech } from "../api/client";
+import { useToast } from "../components/Toast";
+import { useConfirm } from "../components/ConfirmDialog";
+import Spinner from "../components/Spinner";
 
 const STATUS_OPTIONS: Job["status"][] = ["SCHEDULED", "IN_PROGRESS", "COMPLETED", "CANCELLED"];
 
 export default function JobDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const toast = useToast();
+  const confirm = useConfirm();
   const [job, setJob] = useState<Job | null>(null);
   const [techs, setTechs] = useState<Tech[]>([]);
   const [editing, setEditing] = useState(false);
@@ -52,6 +57,7 @@ export default function JobDetail() {
         assignedTechId: form.assignedTechId || undefined,
         addressLine1: form.addressLine1 || undefined,
       });
+      toast.success("Job updated.");
       setEditing(false);
       load();
     } finally {
@@ -60,18 +66,25 @@ export default function JobDetail() {
   };
 
   const onDelete = async () => {
-    if (!confirm(`Delete job "${job?.title}"? This cannot be undone.`)) return;
+    const ok = await confirm({
+      title: "Delete this job?",
+      message: `Delete job "${job?.title}"? This cannot be undone.`,
+      confirmLabel: "Delete job",
+      danger: true,
+    });
+    if (!ok) return;
     setDeleting(true);
     try {
       await api.delete(`/jobs/${id}`);
+      toast.success("Job deleted.");
       navigate("/jobs");
     } catch (err: any) {
-      alert(err?.response?.data?.error ?? "Could not delete this job.");
+      toast.error(err?.response?.data?.error ?? "Could not delete this job.");
       setDeleting(false);
     }
   };
 
-  if (!job) return <p className="muted">Loading...</p>;
+  if (!job) return <Spinner label="Loading job..." />;
 
   return (
     <div>

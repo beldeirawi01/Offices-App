@@ -1,6 +1,7 @@
 import { FormEvent, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import AuthLayout from "../components/AuthLayout";
 
 export default function Register() {
   const { register } = useAuth();
@@ -27,10 +28,10 @@ export default function Register() {
   };
 
   return (
-    <div className="auth-page">
+    <AuthLayout>
       <form className="auth-card" onSubmit={onSubmit}>
-        <h1>Offices App</h1>
-        <p className="subtitle">Set up your business</p>
+        <h1>Create your account</h1>
+        <p className="subtitle">Set up your business in a couple minutes</p>
         {error && <div className="error-banner">{error}</div>}
         <label>
           Business name
@@ -65,6 +66,6 @@ export default function Register() {
           Already have an account? <Link to="/login">Sign in</Link>
         </p>
       </form>
-    </div>
+    </AuthLayout>
   );
 }

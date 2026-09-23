@@ -1,16 +1,17 @@
 import { FormEvent, useEffect, useState } from "react";
 import { api, Organization } from "../api/client";
 import { useAuth } from "../context/AuthContext";
+import { useToast } from "../components/Toast";
 
 export default function Settings() {
   const { user } = useAuth();
+  const toast = useToast();
   const isOwner = user?.role === "OWNER";
 
   const [org, setOrg] = useState<Organization | null>(null);
   const [name, setName] = useState("");
   const [taxRatePercent, setTaxRatePercent] = useState("0");
   const [orgSaving, setOrgSaving] = useState(false);
-  const [orgMessage, setOrgMessage] = useState<string | null>(null);
 
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -29,12 +30,11 @@ export default function Settings() {
   const onSaveOrg = async (e: FormEvent) => {
     e.preventDefault();
     setOrgSaving(true);
-    setOrgMessage(null);
     try {
       await api.put("/organizations/me", { name, taxRatePercent: Number(taxRatePercent) });
-      setOrgMessage("Saved.");
+      toast.success("Business settings saved.");
     } catch (err: any) {
-      setOrgMessage(err?.response?.data?.error ?? "Could not save changes");
+      toast.error(err?.response?.data?.error ?? "Could not save changes");
     } finally {
       setOrgSaving(false);
     }
@@ -88,7 +88,6 @@ export default function Settings() {
               </label>
             </div>
             <p className="muted small">Applied automatically to every new invoice's subtotal.</p>
-            {orgMessage && <p className="muted">{orgMessage}</p>}
             <div className="form-actions">
               <button type="submit" disabled={orgSaving}>
                 {orgSaving ? "Saving..." : "Save"}

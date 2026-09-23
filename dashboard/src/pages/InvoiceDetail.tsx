@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { api, Invoice } from "../api/client";
+import { useToast } from "../components/Toast";
+import { useConfirm } from "../components/ConfirmDialog";
+import Spinner from "../components/Spinner";
 
 type InvoiceDetailData = Invoice & {
   deliveries: { channel: string; recipient: string; success: boolean }[];
@@ -10,11 +13,12 @@ const APP_BASE_URL = (import.meta.env.VITE_APP_BASE_URL as string | undefined) ?
 
 export default function InvoiceDetail() {
   const { id } = useParams();
+  const toast = useToast();
+  const confirm = useConfirm();
   const [invoice, setInvoice] = useState<InvoiceDetailData | null>(null);
   const [sending, setSending] = useState(false);
   const [voiding, setVoiding] = useState(false);
   const [markingPaid, setMarkingPaid] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
 
   const load = () => {
     api.get<InvoiceDetailData>(`/invoices/${id}`).then((res) => setInvoice(res.data));
@@ -24,23 +28,29 @@ export default function InvoiceDetail() {
 
   const onSend = async () => {
     setSending(true);
-    setMessage(null);
     try {
       await api.post(`/invoices/${id}/send`);
-      setMessage("Invoice sent to client.");
+      toast.success("Invoice sent to client.");
       load();
     } catch (err: any) {
-      setMessage(err?.response?.data?.error ?? "Failed to send invoice");
+      toast.error(err?.response?.data?.error ?? "Failed to send invoice");
     } finally {
       setSending(false);
     }
   };
 
   const onVoid = async () => {
-    if (!confirm("Void this invoice? This can't be undone.")) return;
+    const ok = await confirm({
+      title: "Void this invoice?",
+      message: "This can't be undone.",
+      confirmLabel: "Void invoice",
+      danger: true,
+    });
+    if (!ok) return;
     setVoiding(true);
     try {
       await api.post(`/invoices/${id}/void`);
+      toast.success("Invoice voided.");
       load();
     } finally {
       setVoiding(false);
@@ -48,13 +58,19 @@ export default function InvoiceDetail() {
   };
 
   const onMarkPaid = async () => {
-    if (!confirm("Mark this invoice as paid? Use this only if the client paid outside Stripe (cash, check, etc).")) return;
+    const ok = await confirm({
+      title: "Mark as paid?",
+      message: "Use this only if the client paid outside Stripe (cash, check, etc).",
+      confirmLabel: "Mark as paid",
+    });
+    if (!ok) return;
     setMarkingPaid(true);
     try {
       await api.post(`/invoices/${id}/mark-paid`);
+      toast.success("Invoice marked as paid.");
       load();
     } catch (err: any) {
-      setMessage(err?.response?.data?.error ?? "Could not mark invoice as paid");
+      toast.error(err?.response?.data?.error ?? "Could not mark invoice as paid");
     } finally {
       setMarkingPaid(false);
     }
@@ -70,7 +86,7 @@ export default function InvoiceDetail() {
     URL.revokeObjectURL(url);
   };
 
-  if (!invoice) return <p className="muted">Loading...</p>;
+  if (!invoice) return <Spinner label="Loading invoice..." />;
 
   const publicUrl = `${APP_BASE_URL}/pay/${invoice.publicToken}`;
   const canSend = invoice.status === "DRAFT" || invoice.status === "SENT" || invoice.status === "OVERDUE";
@@ -162,7 +178,6 @@ export default function InvoiceDetail() {
           </button>
         )}
       </div>
-      {message && <p className="muted">{message}</p>}
 
       {canSend && (
         <div className="panel">

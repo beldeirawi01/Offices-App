@@ -1,11 +1,17 @@
 import { FormEvent, useEffect, useState } from "react";
 import { api, Tech } from "../api/client";
 import { useAuth } from "../context/AuthContext";
+import { useToast } from "../components/Toast";
+import { useConfirm } from "../components/ConfirmDialog";
+import Spinner from "../components/Spinner";
+import { PlusIcon } from "../components/Icons";
 
 const emptyForm = { name: "", email: "", password: "", phone: "", role: "TECH" as "TECH" | "OWNER" };
 
 export default function Team() {
   const { user } = useAuth();
+  const toast = useToast();
+  const confirm = useConfirm();
   const [techs, setTechs] = useState<Tech[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState(emptyForm);
@@ -30,6 +36,7 @@ export default function Team() {
     setSaving(true);
     try {
       await api.post("/users", form);
+      toast.success(`${form.name} added to the team.`);
       setForm(emptyForm);
       setShowForm(false);
       load();
@@ -41,13 +48,20 @@ export default function Team() {
   };
 
   const onRemove = async (tech: Tech) => {
-    if (!confirm(`Remove ${tech.name} from the team? Any jobs assigned to them will become unassigned.`)) return;
+    const ok = await confirm({
+      title: "Remove team member?",
+      message: `Remove ${tech.name} from the team? Any jobs assigned to them will become unassigned.`,
+      confirmLabel: "Remove",
+      danger: true,
+    });
+    if (!ok) return;
     setRemovingId(tech.id);
     try {
       await api.delete(`/users/${tech.id}`);
+      toast.success(`${tech.name} removed.`);
       load();
     } catch (err: any) {
-      alert(err?.response?.data?.error ?? "Could not remove this team member");
+      toast.error(err?.response?.data?.error ?? "Could not remove this team member");
     } finally {
       setRemovingId(null);
     }
@@ -61,7 +75,9 @@ export default function Team() {
           <p className="page-subtitle">Techs and owners who can log into this business.</p>
         </div>
         {user?.role === "OWNER" && (
-          <button onClick={() => setShowForm((v) => !v)}>{showForm ? "Cancel" : "+ Invite team member"}</button>
+          <button onClick={() => setShowForm((v) => !v)}>
+            {showForm ? "Cancel" : <><PlusIcon /> Invite team member</>}
+          </button>
         )}
       </div>
 
@@ -116,7 +132,7 @@ export default function Team() {
       )}
 
       {loading ? (
-        <p className="muted">Loading...</p>
+        <Spinner label="Loading team..." />
       ) : (
         <div className="card">
           <table className="data-table">

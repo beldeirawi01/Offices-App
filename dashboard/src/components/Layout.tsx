@@ -1,5 +1,15 @@
 import { NavLink, Outlet } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { HomeIcon, CalendarIcon, UsersIcon, InvoiceIcon, TeamIcon, SettingsIcon, LogoutIcon } from "./Icons";
+
+const NAV_ITEMS = [
+  { to: "/", label: "Dashboard", icon: HomeIcon, end: true },
+  { to: "/jobs", label: "Scheduling", icon: CalendarIcon },
+  { to: "/clients", label: "Clients", icon: UsersIcon },
+  { to: "/invoices", label: "Invoices", icon: InvoiceIcon },
+  { to: "/team", label: "Team", icon: TeamIcon },
+  { to: "/settings", label: "Settings", icon: SettingsIcon },
+];
 
 export default function Layout() {
   const { user, logout } = useAuth();
@@ -12,14 +22,12 @@ export default function Layout() {
           Offices App
         </div>
         <nav>
-          <NavLink to="/" end>
-            Dashboard
-          </NavLink>
-          <NavLink to="/jobs">Scheduling</NavLink>
-          <NavLink to="/clients">Clients</NavLink>
-          <NavLink to="/invoices">Invoices</NavLink>
-          <NavLink to="/team">Team</NavLink>
-          <NavLink to="/settings">Settings</NavLink>
+          {NAV_ITEMS.map(({ to, label, icon: Icon, end }) => (
+            <NavLink key={to} to={to} end={end}>
+              <Icon />
+              <span>{label}</span>
+            </NavLink>
+          ))}
         </nav>
         <div className="sidebar-footer">
           <div className="user-info">
@@ -30,7 +38,7 @@ export default function Layout() {
             </div>
           </div>
           <button className="btn-ghost" onClick={logout}>
-            Log out
+            <LogoutIcon /> Log out
           </button>
         </div>
       </aside>

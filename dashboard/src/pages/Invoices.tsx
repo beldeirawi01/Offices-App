@@ -2,6 +2,9 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api, Invoice, Paginated } from "../api/client";
 import Pagination from "../components/Pagination";
+import EmptyState from "../components/EmptyState";
+import Spinner from "../components/Spinner";
+import { PlusIcon } from "../components/Icons";
 
 export default function Invoices() {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
@@ -40,7 +43,9 @@ export default function Invoices() {
             <option value="VOID">Void</option>
           </select>
           <Link to="/invoices/new">
-            <button type="button">+ New invoice</button>
+            <button type="button">
+              <PlusIcon /> New invoice
+            </button>
           </Link>
         </div>
       </div>
@@ -53,7 +58,25 @@ export default function Invoices() {
       />
 
       {loading ? (
-        <p className="muted">Loading...</p>
+        <Spinner label="Loading invoices..." />
+      ) : invoices.length === 0 ? (
+        <EmptyState
+          title={search || statusFilter ? "No matching invoices" : "No invoices yet"}
+          message={
+            search || statusFilter
+              ? "Try a different search or status filter."
+              : "Create your first invoice to start getting paid."
+          }
+          action={
+            !search && !statusFilter && (
+              <Link to="/invoices/new">
+                <button type="button">
+                  <PlusIcon /> New invoice
+                </button>
+              </Link>
+            )
+          }
+        />
       ) : (
         <>
           <div className="card">
@@ -81,13 +104,6 @@ export default function Invoices() {
                     <td>{new Date(inv.createdAt).toLocaleDateString()}</td>
                   </tr>
                 ))}
-                {invoices.length === 0 && (
-                  <tr>
-                    <td colSpan={5} className="muted empty-cell">
-                      No invoices yet.
-                    </td>
-                  </tr>
-                )}
               </tbody>
             </table>
           </div>

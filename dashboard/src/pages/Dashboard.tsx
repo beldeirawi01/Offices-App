@@ -1,7 +1,10 @@
 import { useEffect, useState } from "react";
 import { api, ReportSummary } from "../api/client";
+import Spinner from "../components/Spinner";
+import { useAuth } from "../context/AuthContext";
 
 export default function Dashboard() {
+  const { user } = useAuth();
   const [summary, setSummary] = useState<ReportSummary | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -12,14 +15,21 @@ export default function Dashboard() {
       .finally(() => setLoading(false));
   }, []);
 
-  if (loading) return <p>Loading...</p>;
+  if (loading) return <Spinner label="Loading your dashboard..." />;
   if (!summary) return <p>Could not load report summary.</p>;
 
   const maxJobCount = Math.max(1, ...summary.busiestDays.map((d) => d.jobCount));
 
+  const firstName = user?.name?.split(" ")[0];
+
   return (
     <div>
-      <h1>Dashboard</h1>
+      <div className="page-header">
+        <div>
+          <h1>{firstName ? `Welcome back, ${firstName}` : "Dashboard"}</h1>
+          <p className="page-subtitle">Here's how the business is doing.</p>
+        </div>
+      </div>
 
       <div className="stat-grid">
         <StatCard label="Revenue collected" value={`$${summary.totalRevenue.toFixed(2)}`} />

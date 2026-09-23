@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { publicApi } from "../api/client";
+import Spinner from "../components/Spinner";
 
 interface PublicInvoiceData {
   invoiceNumber: string;
@@ -42,7 +43,7 @@ export default function PublicInvoice() {
   if (!invoice) {
     return (
       <div className="public-invoice-page">
-        <p className="muted">Loading invoice...</p>
+        <Spinner label="Loading invoice..." />
       </div>
     );
   }

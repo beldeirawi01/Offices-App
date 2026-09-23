@@ -1,12 +1,17 @@
 import { FormEvent, useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { api, Client, Invoice, Job } from "../api/client";
+import { useToast } from "../components/Toast";
+import { useConfirm } from "../components/ConfirmDialog";
+import Spinner from "../components/Spinner";
 
 type ClientWithHistory = Client & { jobs: Job[]; invoices: Invoice[] };
 
 export default function ClientDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const toast = useToast();
+  const confirm = useConfirm();
   const [client, setClient] = useState<ClientWithHistory | null>(null);
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({ name: "", email: "", phone: "", smsConsent: false, addressLine1: "" });
@@ -39,6 +44,7 @@ export default function ClientDetail() {
         smsConsent: form.smsConsent,
         addressLine1: form.addressLine1 || undefined,
       });
+      toast.success("Client updated.");
       setEditing(false);
       load();
     } finally {
@@ -47,18 +53,25 @@ export default function ClientDetail() {
   };
 
   const onDelete = async () => {
-    if (!confirm(`Delete ${client?.name}? This cannot be undone.`)) return;
+    const ok = await confirm({
+      title: "Delete this client?",
+      message: `Delete ${client?.name}? This cannot be undone.`,
+      confirmLabel: "Delete client",
+      danger: true,
+    });
+    if (!ok) return;
     setDeleting(true);
     try {
       await api.delete(`/clients/${id}`);
+      toast.success("Client deleted.");
       navigate("/clients");
     } catch (err: any) {
-      alert(err?.response?.data?.error ?? "Could not delete this client — they may still have jobs or invoices.");
+      toast.error(err?.response?.data?.error ?? "Could not delete this client — they may still have jobs or invoices.");
       setDeleting(false);
     }
   };
 
-  if (!client) return <p className="muted">Loading...</p>;
+  if (!client) return <Spinner label="Loading client..." />;
 
   return (
     <div>
