@@ -183,7 +183,7 @@ invoicesRouter.put("/:id", async (req, res) => {
 invoicesRouter.post("/:id/send", async (req, res) => {
   const invoice = await prisma.invoice.findFirst({
     where: { id: req.params.id, organizationId: req.auth!.organizationId },
-    include: { client: true },
+    include: { client: true, organization: true },
   });
   if (!invoice) throw new HttpError(404, "Invoice not found");
   if (invoice.status === "PAID" || invoice.status === "VOID") {
@@ -224,6 +224,7 @@ invoicesRouter.post("/:id/send", async (req, res) => {
     invoiceNumber: invoice.invoiceNumber,
     pageUrl,
     total: invoice.total,
+    businessName: invoice.organization.name,
   });
 
   await prisma.invoiceDelivery.createMany({

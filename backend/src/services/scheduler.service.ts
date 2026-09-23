@@ -33,7 +33,7 @@ async function sendOverdueReminders() {
       status: "OVERDUE",
       OR: [{ lastReminderAt: null }, { lastReminderAt: { lt: cutoff } }],
     },
-    include: { client: true },
+    include: { client: true, organization: true },
   });
 
   for (const invoice of overdueInvoices) {
@@ -50,6 +50,7 @@ async function sendOverdueReminders() {
         pageUrl: `${env.appBaseUrl}/pay/${invoice.publicToken}`,
         total: invoice.total,
         daysOverdue,
+        businessName: invoice.organization.name,
       });
       await prisma.invoice.update({ where: { id: invoice.id }, data: { lastReminderAt: now } });
     } catch (err) {

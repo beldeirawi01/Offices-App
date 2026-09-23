@@ -22,7 +22,7 @@ export async function sendSms(params: { to: string; body: string }) {
   return client.messages.create({ to: params.to, from: env.twilioFromNumber, body: params.body });
 }
 
-export async function sendEmail(params: { to: string; subject: string; text: string; html: string }) {
+export async function sendEmail(params: { to: string; subject: string; text: string; html: string; fromName?: string }) {
   if (!env.brevoApiKey) {
     throw new Error("Brevo API key is not configured");
   }
@@ -34,7 +34,10 @@ export async function sendEmail(params: { to: string; subject: string; text: str
       Accept: "application/json",
     },
     body: JSON.stringify({
-      sender: { email: env.brevoFromEmail },
+      // The from address is always our one verified Brevo sender; the display
+      // name is set per-send to the tenant's own business name so clients see
+      // "Mike's HVAC" rather than a generic platform name in their inbox.
+      sender: { email: env.brevoFromEmail, name: params.fromName ?? "Offices App" },
       to: [{ email: params.to }],
       subject: params.subject,
       textContent: params.text,
@@ -63,6 +66,7 @@ export async function deliverInvoiceToClient(params: {
   invoiceNumber: string;
   pageUrl: string;
   total: number;
+  businessName: string;
 }): Promise<DeliveryResult[]> {
   const results: DeliveryResult[] = [];
 
@@ -87,6 +91,7 @@ export async function deliverInvoiceToClient(params: {
     try {
       await sendEmail({
         to: params.clientEmail,
+        fromName: params.businessName,
         subject: `Invoice ${params.invoiceNumber} — $${params.total.toFixed(2)}`,
         text: `Your invoice ${params.invoiceNumber} for $${params.total.toFixed(2)} is ready.\n\nView and pay: ${params.pageUrl}`,
         html: `<p>Your invoice <strong>${params.invoiceNumber}</strong> for <strong>$${params.total.toFixed(2)}</strong> is ready.</p><p><a href="${params.pageUrl}">View invoice and pay</a></p>`,
@@ -114,6 +119,7 @@ export async function sendInvoiceReminder(params: {
   pageUrl: string;
   total: number;
   daysOverdue: number;
+  businessName: string;
 }): Promise<DeliveryResult[]> {
   const results: DeliveryResult[] = [];
 
@@ -133,6 +139,7 @@ export async function sendInvoiceReminder(params: {
     try {
       await sendEmail({
         to: params.clientEmail,
+        fromName: params.businessName,
         subject: `Reminder: Invoice ${params.invoiceNumber} is overdue`,
         text: `This is a reminder that invoice ${params.invoiceNumber} for $${params.total.toFixed(2)} is ${params.daysOverdue} day(s) overdue.\n\nView and pay: ${params.pageUrl}`,
         html: `<p>This is a reminder that invoice <strong>${params.invoiceNumber}</strong> for <strong>$${params.total.toFixed(2)}</strong> is <strong>${params.daysOverdue} day(s) overdue</strong>.</p><p><a href="${params.pageUrl}">View invoice and pay</a></p>`,
