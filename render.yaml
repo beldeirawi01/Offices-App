@@ -11,14 +11,14 @@
 # your accounts to create; only the credentials plug in here.
 
 databases:
-  - name: offices-app-db
+  - name: jobscribe-db
     plan: starter
-    databaseName: offices_app
-    user: offices_app
+    databaseName: jobscribe
+    user: jobscribe
 
 services:
   - type: web
-    name: offices-app-backend
+    name: jobscribe-backend
     runtime: docker
     dockerfilePath: ./backend/Dockerfile
     dockerContext: ./backend
@@ -33,7 +33,7 @@ services:
         generateValue: true
       - key: DATABASE_URL
         fromDatabase:
-          name: offices-app-db
+          name: jobscribe-db
           property: connectionString
       - key: APP_BASE_URL
         sync: false
@@ -71,7 +71,7 @@ services:
         sync: false
 
   - type: web
-    name: offices-app-dashboard
+    name: jobscribe-dashboard
     runtime: static
     buildCommand: cd dashboard && npm ci && npm run build
     staticPublishPath: ./dashboard/dist

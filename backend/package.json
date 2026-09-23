@@ -1,5 +1,5 @@
 {
-  "name": "offices-app-backend",
+  "name": "jobscribe-backend",
   "version": "0.1.0",
   "private": true,
   "description": "Backend API for the voice-to-invoice trades back-office app",

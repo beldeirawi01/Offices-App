@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "Offices App",
-    "slug": "offices-app-mobile",
+    "name": "Jobscribe",
+    "slug": "jobscribe-mobile",
     "version": "0.1.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
@@ -17,7 +17,7 @@
     },
     "android": {
       "permissions": ["RECORD_AUDIO"],
-      "package": "com.officesapp.mobile"
+      "package": "com.jobscribe.mobile"
     },
     "extra": {
       "apiBaseUrl": "http://localhost:4000/api"

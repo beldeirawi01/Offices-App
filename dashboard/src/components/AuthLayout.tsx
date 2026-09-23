@@ -13,7 +13,7 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
       <div className="auth-brand-panel">
         <div className="auth-brand-mark">O</div>
         <h1>Run your trades business from your pocket.</h1>
-        <p>Offices App turns a voice note on-site into a paid invoice — no paperwork, no chasing clients.</p>
+        <p>Jobscribe turns a voice note on-site into a paid invoice — no paperwork, no chasing clients.</p>
         <ul className="auth-benefits">
           {BENEFITS.map((benefit) => (
             <li key={benefit}>

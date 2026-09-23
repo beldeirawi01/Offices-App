@@ -37,7 +37,7 @@ export async function sendEmail(params: { to: string; subject: string; text: str
       // The from address is always our one verified Brevo sender; the display
       // name is set per-send to the tenant's own business name so clients see
       // "Mike's HVAC" rather than a generic platform name in their inbox.
-      sender: { email: env.brevoFromEmail, name: params.fromName ?? "Offices App" },
+      sender: { email: env.brevoFromEmail, name: params.fromName ?? "Jobscribe" },
       to: [{ email: params.to }],
       subject: params.subject,
       textContent: params.text,

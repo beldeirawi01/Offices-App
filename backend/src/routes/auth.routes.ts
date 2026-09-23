@@ -101,7 +101,7 @@ authRouter.post("/forgot-password", async (req, res) => {
     try {
       await sendEmail({
         to: user.email,
-        subject: "Reset your Offices App password",
+        subject: "Reset your Jobscribe password",
         text: `Reset your password: ${resetUrl}\n\nThis link expires in 30 minutes. If you didn't request this, ignore this email.`,
         html: `<p>Reset your password by clicking below. This link expires in 30 minutes.</p><p><a href="${resetUrl}">Reset password</a></p><p>If you didn't request this, you can safely ignore this email.</p>`,
       });

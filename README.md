@@ -1,4 +1,4 @@
-# Offices App
+# Jobscribe
 
 A back-office SaaS for solo and small trades businesses (HVAC, plumbing, electrical) built around **voice-to-invoice**: a tech records a spoken job note on-site, and the app transcribes it, extracts structured billing details, and generates a ready-to-send invoice — no typing required.
 

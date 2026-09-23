@@ -19,7 +19,7 @@ export default function Layout() {
       <aside className="sidebar">
         <div className="brand">
           <span className="brand-mark">O</span>
-          Offices App
+          Jobscribe
         </div>
         <nav>
           {NAV_ITEMS.map(({ to, label, icon: Icon, end }) => (

@@ -23,7 +23,7 @@ export default function LoginScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Offices App</Text>
+      <Text style={styles.title}>Jobscribe</Text>
       <Text style={styles.subtitle}>Sign in to log jobs</Text>
 
       {error && <Text style={styles.error}>{error}</Text>}

@@ -29,7 +29,7 @@ function RootNavigator() {
 
   return (
     <Stack.Navigator>
-      <Stack.Screen name="JobList" component={JobListScreen} options={{ title: "Offices App" }} />
+      <Stack.Screen name="JobList" component={JobListScreen} options={{ title: "Jobscribe" }} />
       <Stack.Screen name="NewJob" component={NewJobScreen} options={{ title: "New job" }} />
       <Stack.Screen name="Record" component={RecordScreen} options={{ title: "Record job note" }} />
       <Stack.Screen
