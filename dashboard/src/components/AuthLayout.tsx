@@ -1,5 +1,5 @@
 import { ReactNode } from "react";
-import { CheckCircleIcon } from "./Icons";
+import { BrandMark, CheckCircleIcon } from "./Icons";
 
 const BENEFITS = [
   "Turn a technician's voice note into a finished invoice in seconds",
@@ -11,7 +11,9 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
   return (
     <div className="auth-page">
       <div className="auth-brand-panel">
-        <div className="auth-brand-mark">O</div>
+        <div className="auth-brand-mark">
+          <BrandMark width={20} height={20} />
+        </div>
         <h1>Run your trades business from your pocket.</h1>
         <p>Jobscribe turns a voice note on-site into a paid invoice — no paperwork, no chasing clients.</p>
         <ul className="auth-benefits">

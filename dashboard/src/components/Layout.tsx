@@ -1,6 +1,6 @@
 import { NavLink, Outlet } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { HomeIcon, CalendarIcon, UsersIcon, InvoiceIcon, TeamIcon, SettingsIcon, LogoutIcon } from "./Icons";
+import { BrandMark, HomeIcon, CalendarIcon, UsersIcon, InvoiceIcon, TeamIcon, SettingsIcon, LogoutIcon } from "./Icons";
 
 const NAV_ITEMS = [
   { to: "/", label: "Dashboard", icon: HomeIcon, end: true },
@@ -18,7 +18,9 @@ export default function Layout() {
     <div className="app-shell">
       <aside className="sidebar">
         <div className="brand">
-          <span className="brand-mark">O</span>
+          <span className="brand-mark">
+            <BrandMark />
+          </span>
           Jobscribe
         </div>
         <nav>

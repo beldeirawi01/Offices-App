@@ -32,10 +32,10 @@ export default function Dashboard() {
       </div>
 
       <div className="stat-grid">
-        <StatCard label="Revenue collected" value={`$${summary.totalRevenue.toFixed(2)}`} />
-        <StatCard label="Outstanding balance" value={`$${summary.outstandingBalance.toFixed(2)}`} />
-        <StatCard label="Paid invoices" value={summary.paidInvoiceCount} />
-        <StatCard label="Awaiting payment" value={summary.outstandingInvoiceCount} />
+        <StatCard tone="revenue" label="Revenue collected" value={`$${summary.totalRevenue.toFixed(2)}`} />
+        <StatCard tone="balance" label="Outstanding balance" value={`$${summary.outstandingBalance.toFixed(2)}`} />
+        <StatCard tone="paid" label="Paid invoices" value={summary.paidInvoiceCount} />
+        <StatCard tone="pending" label="Awaiting payment" value={summary.outstandingInvoiceCount} />
       </div>
 
       <div className="panel-grid">
@@ -97,9 +97,17 @@ export default function Dashboard() {
   );
 }
 
-function StatCard({ label, value }: { label: string; value: string | number }) {
+function StatCard({
+  label,
+  value,
+  tone,
+}: {
+  label: string;
+  value: string | number;
+  tone: "revenue" | "balance" | "paid" | "pending";
+}) {
   return (
-    <div className="stat-card">
+    <div className={`stat-card stat-card--${tone}`}>
       <div className="stat-value">{value}</div>
       <div className="stat-label">{label}</div>
     </div>

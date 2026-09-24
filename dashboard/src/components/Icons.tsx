@@ -13,6 +13,16 @@ const base = {
   strokeLinejoin: "round" as const,
 };
 
+export function BrandMark(props: IconProps) {
+  return (
+    <svg width={18} height={18} viewBox="0 0 24 24" fill="currentColor" {...props}>
+      <rect x="4" y="13" width="3.4" height="7" rx="1.4" />
+      <rect x="10.3" y="6.5" width="3.4" height="13.5" rx="1.4" />
+      <rect x="16.6" y="9.5" width="3.4" height="10.5" rx="1.4" />
+    </svg>
+  );
+}
+
 export function HomeIcon(props: IconProps) {
   return (
     <svg {...base} {...props}>
