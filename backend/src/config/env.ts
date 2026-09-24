@@ -31,6 +31,11 @@ export const env = {
 
   stripeSecretKey: process.env.STRIPE_SECRET_KEY ?? "",
   stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET ?? "",
+  // Separate secret because Stripe issues a distinct signing secret for a
+  // webhook endpoint registered to listen on connected accounts (Stripe
+  // Connect) vs. one listening on your own platform account, even if both
+  // point at this same server.
+  stripeConnectWebhookSecret: process.env.STRIPE_CONNECT_WEBHOOK_SECRET ?? "",
 
   // Comma-separated list of origins allowed to call this API (dashboard, mobile
   // in dev). Falls back to permissive CORS only in development.

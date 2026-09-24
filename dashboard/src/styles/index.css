@@ -827,16 +827,21 @@ p.small {
   box-shadow: none;
 }
 
-.consent-yes {
-  color: var(--success);
+.consent-yes,
+.consent-no {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   font-size: 13px;
   font-weight: 600;
 }
 
+.consent-yes {
+  color: var(--success);
+}
+
 .consent-no {
   color: var(--warning);
-  font-size: 13px;
-  font-weight: 600;
 }
 
 /* ---------- Detail pages ---------- */

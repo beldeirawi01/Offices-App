@@ -1,11 +1,14 @@
 import { FormEvent, useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { api, Organization } from "../api/client";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../components/Toast";
+import { CheckCircleIcon, AlertCircleIcon } from "../components/Icons";
 
 export default function Settings() {
   const { user } = useAuth();
   const toast = useToast();
+  const [searchParams, setSearchParams] = useSearchParams();
   const isOwner = user?.role === "OWNER";
 
   const [org, setOrg] = useState<Organization | null>(null);
@@ -13,19 +16,42 @@ export default function Settings() {
   const [taxRatePercent, setTaxRatePercent] = useState("0");
   const [orgSaving, setOrgSaving] = useState(false);
 
+  const [stripeLoading, setStripeLoading] = useState(false);
+
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [passwordSaving, setPasswordSaving] = useState(false);
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [passwordSuccess, setPasswordSuccess] = useState(false);
 
-  useEffect(() => {
+  const loadOrg = () => {
     api.get<Organization>("/organizations/me").then((res) => {
       setOrg(res.data);
       setName(res.data.name);
       setTaxRatePercent((res.data.taxRate * 100).toString());
     });
-  }, []);
+  };
+
+  useEffect(loadOrg, []);
+
+  // Landed back here after Stripe's hosted onboarding — pull the account's
+  // real status rather than assuming it finished successfully.
+  useEffect(() => {
+    if (searchParams.get("stripe") !== "return") return;
+    setSearchParams({}, { replace: true });
+    api
+      .post<Organization>("/organizations/me/stripe/refresh-status")
+      .then((res) => {
+        setOrg(res.data);
+        toast.success(
+          res.data.stripeChargesEnabled
+            ? "Stripe account connected — you can now send invoices."
+            : "Stripe onboarding saved, but a few steps are still incomplete.",
+        );
+      })
+      .catch(() => toast.error("Could not confirm your Stripe account status."));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   const onSaveOrg = async (e: FormEvent) => {
     e.preventDefault();
@@ -37,6 +63,26 @@ export default function Settings() {
       toast.error(err?.response?.data?.error ?? "Could not save changes");
     } finally {
       setOrgSaving(false);
+    }
+  };
+
+  const onConnectStripe = async () => {
+    setStripeLoading(true);
+    try {
+      const { data } = await api.post<{ url: string }>("/organizations/me/stripe/onboard");
+      window.location.href = data.url;
+    } catch (err: any) {
+      toast.error(err?.response?.data?.error ?? "Could not start Stripe onboarding");
+      setStripeLoading(false);
+    }
+  };
+
+  const onOpenStripeDashboard = async () => {
+    try {
+      const { data } = await api.get<{ url: string }>("/organizations/me/stripe/dashboard-link");
+      window.open(data.url, "_blank", "noreferrer");
+    } catch (err: any) {
+      toast.error(err?.response?.data?.error ?? "Could not open the Stripe dashboard");
     }
   };
 
@@ -94,6 +140,50 @@ export default function Settings() {
               </button>
             </div>
           </form>
+        )}
+      </section>
+
+      <section className="panel">
+        <h2>Payments</h2>
+        {!isOwner ? (
+          <p className="muted">Only the business owner can manage payment settings.</p>
+        ) : !org ? (
+          <p className="muted">Loading...</p>
+        ) : org.stripeChargesEnabled ? (
+          <div className="form-card">
+            <p className="consent-yes">
+              <CheckCircleIcon width={16} height={16} /> Connected — clients can pay your invoices directly, and
+              payments go straight to your bank account.
+            </p>
+            {!org.stripePayoutsEnabled && (
+              <p className="muted small">
+                Payouts aren't enabled yet — Stripe may still be reviewing your account details.
+              </p>
+            )}
+            <div className="button-row">
+              <button type="button" className="btn-secondary" onClick={onOpenStripeDashboard}>
+                View Stripe dashboard
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="form-card">
+            <p className={org.stripeAccountId ? "consent-no" : "muted"}>
+              {org.stripeAccountId ? (
+                <>
+                  <AlertCircleIcon width={16} height={16} /> Your Stripe account setup is incomplete — finish it to
+                  start accepting payments.
+                </>
+              ) : (
+                "Connect a Stripe account so clients can pay your invoices and the money goes straight to your bank account. You can't send invoices until this is done."
+              )}
+            </p>
+            <div className="button-row">
+              <button type="button" onClick={onConnectStripe} disabled={stripeLoading}>
+                {stripeLoading ? "Redirecting..." : org.stripeAccountId ? "Continue setup" : "Connect with Stripe"}
+              </button>
+            </div>
+          </div>
         )}
       </section>
 

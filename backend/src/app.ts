@@ -39,8 +39,9 @@ if (env.nodeEnv !== "test") {
 }
 app.use(apiLimiter);
 
-// Stripe webhook needs the raw body for signature verification, so it's
-// mounted before the JSON body parser.
+// Stripe webhooks need the raw body for signature verification, so this is
+// mounted before the JSON body parser. Covers both the platform-account
+// webhook and the Connect-scoped one (see routes/payments.routes.ts).
 app.use("/api/payments", express.raw({ type: "application/json" }), paymentsRouter);
 
 app.use(express.json());

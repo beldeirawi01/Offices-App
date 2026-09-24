@@ -60,6 +60,17 @@ describe("invoice send guards", () => {
     expect(res.status).toBe(400);
   });
 
+  it("refuses to send an invoice before Stripe onboarding is complete", async () => {
+    const owner = await registerOwner();
+    const client = await createClient(owner.token, { name: "Ready client", email: "ready@test.com" });
+    const invoice = await createDraftInvoice(owner.token, owner.user.organizationId, client.id);
+
+    const res = await request(app).post(`/api/invoices/${invoice.id}/send`).set("Authorization", `Bearer ${owner.token}`);
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/stripe/i);
+  });
+
   it("void endpoint marks a draft invoice VOID", async () => {
     const owner = await registerOwner();
     const client = await createClient(owner.token, { name: "To void", email: "tovoid@test.com" });

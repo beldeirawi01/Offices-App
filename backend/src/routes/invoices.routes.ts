@@ -199,6 +199,12 @@ invoicesRouter.post("/:id/send", async (req, res) => {
         : "Client has no email or SMS-consented phone number on file to deliver the invoice to",
     );
   }
+  if (!invoice.organization.stripeAccountId || !invoice.organization.stripeChargesEnabled) {
+    throw new HttpError(
+      400,
+      "Connect your Stripe account in Settings before sending invoices — clients can't pay you until that's done.",
+    );
+  }
 
   let paymentUrl = invoice.stripePaymentLinkUrl ?? undefined;
 
@@ -207,6 +213,7 @@ invoicesRouter.post("/:id/send", async (req, res) => {
       invoiceId: invoice.id,
       invoiceNumber: invoice.invoiceNumber,
       totalCents: Math.round(invoice.total * 100),
+      stripeAccountId: invoice.organization.stripeAccountId,
     });
     paymentUrl = link.url;
     await prisma.invoice.update({

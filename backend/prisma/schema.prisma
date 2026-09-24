@@ -45,6 +45,15 @@ model Organization {
   // Sales tax rate as a decimal fraction (e.g. 0.0825 for 8.25%), applied to
   // every invoice's subtotal. Owner-configurable from Settings.
   taxRate   Float    @default(0)
+
+  // Stripe Connect — each business gets its own connected account so client
+  // payments settle to their bank account, not ours. Populated once the
+  // owner completes Stripe's hosted onboarding from Settings.
+  stripeAccountId        String?
+  stripeChargesEnabled   Boolean @default(false)
+  stripePayoutsEnabled   Boolean @default(false)
+  stripeDetailsSubmitted Boolean @default(false)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

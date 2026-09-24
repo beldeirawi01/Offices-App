@@ -105,6 +105,10 @@ export interface Organization {
   id: string;
   name: string;
   taxRate: number;
+  stripeAccountId: string | null;
+  stripeChargesEnabled: boolean;
+  stripePayoutsEnabled: boolean;
+  stripeDetailsSubmitted: boolean;
 }
 
 export interface Tech {

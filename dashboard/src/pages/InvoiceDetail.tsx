@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { api, Invoice } from "../api/client";
+import { api, Invoice, Organization } from "../api/client";
 import { useToast } from "../components/Toast";
 import { useConfirm } from "../components/ConfirmDialog";
 import Spinner from "../components/Spinner";
@@ -16,6 +16,7 @@ export default function InvoiceDetail() {
   const toast = useToast();
   const confirm = useConfirm();
   const [invoice, setInvoice] = useState<InvoiceDetailData | null>(null);
+  const [org, setOrg] = useState<Organization | null>(null);
   const [sending, setSending] = useState(false);
   const [voiding, setVoiding] = useState(false);
   const [markingPaid, setMarkingPaid] = useState(false);
@@ -25,6 +26,9 @@ export default function InvoiceDetail() {
   };
 
   useEffect(load, [id]);
+  useEffect(() => {
+    api.get<Organization>("/organizations/me").then((res) => setOrg(res.data));
+  }, []);
 
   const onSend = async () => {
     setSending(true);
@@ -91,6 +95,8 @@ export default function InvoiceDetail() {
   const publicUrl = `${APP_BASE_URL}/pay/${invoice.publicToken}`;
   const canSend = invoice.status === "DRAFT" || invoice.status === "SENT" || invoice.status === "OVERDUE";
   const canVoid = invoice.status !== "PAID" && invoice.status !== "VOID";
+  const stripeNotReady = org != null && !org.stripeChargesEnabled;
+  const showStripeWarning = stripeNotReady && (invoice.status === "DRAFT" || invoice.status === "OVERDUE");
 
   return (
     <div>
@@ -160,6 +166,13 @@ export default function InvoiceDetail() {
         </div>
 
         <aside className="invoice-sidebar">
+          {showStripeWarning && (
+            <div className="error-banner" style={{ marginBottom: 16 }}>
+              Connect your Stripe account in <Link to="/settings">Settings</Link> before sending invoices — clients
+              can't pay you until that's done.
+            </div>
+          )}
+
           <div className="panel invoice-summary-card">
             <span className={`badge badge-${invoice.status.toLowerCase()}`}>{invoice.status}</span>
 
@@ -180,12 +193,12 @@ export default function InvoiceDetail() {
 
             <div className="button-stack">
               {invoice.status === "DRAFT" && (
-                <button onClick={onSend} disabled={sending}>
+                <button onClick={onSend} disabled={sending || stripeNotReady}>
                   {sending ? "Sending..." : "Send to client"}
                 </button>
               )}
               {invoice.status === "OVERDUE" && (
-                <button onClick={onSend} disabled={sending}>
+                <button onClick={onSend} disabled={sending || stripeNotReady}>
                   {sending ? "Sending..." : "Resend reminder"}
                 </button>
               )}
