@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { ActivityIndicator, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { useAuth } from "../context/AuthContext";
+import { colors, radius, spacing } from "../theme";
 
 export default function LoginScreen() {
   const { login } = useAuth();
@@ -45,25 +46,31 @@ export default function LoginScreen() {
       />
 
       <TouchableOpacity style={styles.button} onPress={onSubmit} disabled={loading}>
-        {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Sign in</Text>}
+        {loading ? <ActivityIndicator color={colors.white} /> : <Text style={styles.buttonText}>Sign in</Text>}
       </TouchableOpacity>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: "center", padding: 24, backgroundColor: "#f5f6f8" },
-  title: { fontSize: 28, fontWeight: "700", textAlign: "center" },
-  subtitle: { fontSize: 14, color: "#6b7280", textAlign: "center", marginBottom: 24 },
+  container: { flex: 1, justifyContent: "center", padding: spacing.xl, backgroundColor: colors.paper },
+  title: { fontSize: 30, fontWeight: "800", textAlign: "center", color: colors.ink, letterSpacing: -0.5 },
+  subtitle: { fontSize: 14, color: colors.steel, textAlign: "center", marginBottom: spacing.xl },
   input: {
-    backgroundColor: "#fff",
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: "#e2e4e9",
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 12,
+    borderColor: colors.lineStrong,
+    borderRadius: radius.sm,
+    padding: spacing.md,
+    marginBottom: spacing.md,
   },
-  button: { backgroundColor: "#2563eb", borderRadius: 8, padding: 14, alignItems: "center", marginTop: 8 },
-  buttonText: { color: "#fff", fontWeight: "600" },
-  error: { color: "#991b1b", marginBottom: 12, textAlign: "center" },
+  button: {
+    backgroundColor: colors.signal,
+    borderRadius: radius.sm,
+    padding: spacing.md + 2,
+    alignItems: "center",
+    marginTop: spacing.xs,
+  },
+  buttonText: { color: colors.white, fontWeight: "700" },
+  error: { color: colors.danger, marginBottom: spacing.md, textAlign: "center" },
 });

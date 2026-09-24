@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { api } from "../api/client";
 import { RootStackParamList } from "../navigation/types";
+import { colors, radius, spacing } from "../theme";
 
 type Props = NativeStackScreenProps<RootStackParamList, "Record">;
 
@@ -116,7 +117,7 @@ export default function RecordScreen({ route, navigation }: Props) {
 
       {(state === "uploading" || state === "processing") && (
         <View style={styles.centered}>
-          <ActivityIndicator size="large" color="#2563eb" />
+          <ActivityIndicator size="large" color={colors.signal} />
           <Text style={styles.processingLabel}>
             {state === "uploading" ? "Uploading voice note…" : "Transcribing and building your invoice…"}
           </Text>
@@ -136,21 +137,27 @@ export default function RecordScreen({ route, navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#f5f6f8", padding: 24, justifyContent: "center" },
-  jobTitle: { fontSize: 20, fontWeight: "700", textAlign: "center", marginBottom: 16 },
-  instructions: { color: "#6b7280", textAlign: "center", marginBottom: 32 },
+  container: { flex: 1, backgroundColor: colors.paper, padding: spacing.xl, justifyContent: "center" },
+  jobTitle: { fontSize: 20, fontWeight: "800", textAlign: "center", marginBottom: spacing.lg, color: colors.ink },
+  instructions: { color: colors.steel, textAlign: "center", marginBottom: spacing.xxl },
   recordButton: {
-    backgroundColor: "#ef4444",
-    borderRadius: 100,
+    backgroundColor: colors.danger,
+    borderRadius: radius.pill,
     paddingVertical: 20,
     alignItems: "center",
     alignSelf: "center",
-    paddingHorizontal: 32,
+    paddingHorizontal: spacing.xxl,
   },
-  stopButton: { backgroundColor: "#111827" },
-  recordButtonText: { color: "#fff", fontSize: 16, fontWeight: "700" },
-  recordingLabel: { textAlign: "center", fontSize: 18, color: "#ef4444", marginBottom: 32, fontWeight: "600" },
-  centered: { alignItems: "center", gap: 16 },
-  processingLabel: { color: "#6b7280", marginTop: 12, textAlign: "center" },
-  error: { color: "#991b1b", textAlign: "center", marginBottom: 16 },
+  stopButton: { backgroundColor: colors.ink },
+  recordButtonText: { color: colors.white, fontSize: 16, fontWeight: "700" },
+  recordingLabel: {
+    textAlign: "center",
+    fontSize: 18,
+    color: colors.danger,
+    marginBottom: spacing.xxl,
+    fontWeight: "700",
+  },
+  centered: { alignItems: "center", gap: spacing.lg },
+  processingLabel: { color: colors.steel, marginTop: spacing.md, textAlign: "center" },
+  error: { color: colors.danger, textAlign: "center", marginBottom: spacing.lg },
 });

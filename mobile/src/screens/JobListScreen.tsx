@@ -5,6 +5,7 @@ import { FlatList, RefreshControl, StyleSheet, Text, TouchableOpacity, View } fr
 import { api, Job, Paginated } from "../api/client";
 import { useAuth } from "../context/AuthContext";
 import { RootStackParamList } from "../navigation/types";
+import { colors, radius, spacing } from "../theme";
 
 type Props = NativeStackScreenProps<RootStackParamList, "JobList">;
 
@@ -58,7 +59,7 @@ export default function JobListScreen({ navigation }: Props) {
             <Text style={styles.cardTitle}>{item.title}</Text>
             <Text style={styles.cardSub}>{item.client.name}</Text>
             <View style={styles.rowBetween}>
-              <Text style={styles.badge}>{item.status.replace("_", " ")}</Text>
+              <Text style={styles.badge}>{item.status.replace("_", " ").toLowerCase()}</Text>
               {item.invoice && <Text style={styles.invoiceTag}>Invoice ready</Text>}
             </View>
           </TouchableOpacity>
@@ -69,38 +70,42 @@ export default function JobListScreen({ navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#f5f6f8", padding: 16 },
-  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 16 },
-  title: { fontSize: 24, fontWeight: "700" },
-  logout: { color: "#2563eb" },
+  container: { flex: 1, backgroundColor: colors.paper, padding: spacing.lg },
+  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: spacing.lg },
+  title: { fontSize: 24, fontWeight: "800", color: colors.ink, letterSpacing: -0.3 },
+  logout: { color: colors.denim, fontWeight: "600" },
   newJobButton: {
-    backgroundColor: "#111827",
-    borderRadius: 10,
-    paddingVertical: 12,
+    backgroundColor: colors.signal,
+    borderRadius: radius.sm,
+    paddingVertical: spacing.md,
     alignItems: "center",
-    marginBottom: 16,
+    marginBottom: spacing.lg,
   },
-  newJobButtonText: { color: "#fff", fontWeight: "700" },
+  newJobButtonText: { color: colors.white, fontWeight: "700" },
   card: {
-    backgroundColor: "#fff",
-    borderRadius: 10,
-    padding: 16,
-    marginBottom: 10,
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
+    padding: spacing.lg,
+    marginBottom: spacing.sm + 2,
     borderWidth: 1,
-    borderColor: "#e2e4e9",
+    borderColor: colors.line,
+    borderLeftWidth: 3,
+    borderLeftColor: colors.signal,
   },
-  cardTitle: { fontSize: 16, fontWeight: "600" },
-  cardSub: { color: "#6b7280", marginTop: 2 },
-  rowBetween: { flexDirection: "row", justifyContent: "space-between", marginTop: 10, alignItems: "center" },
+  cardTitle: { fontSize: 16, fontWeight: "700", color: colors.ink },
+  cardSub: { color: colors.steel, marginTop: 2 },
+  rowBetween: { flexDirection: "row", justifyContent: "space-between", marginTop: spacing.md, alignItems: "center" },
   badge: {
     fontSize: 12,
-    color: "#374151",
-    backgroundColor: "#e5e7eb",
-    paddingHorizontal: 8,
+    fontWeight: "600",
+    color: colors.steel,
+    backgroundColor: colors.surfaceSunken,
+    paddingHorizontal: spacing.sm,
     paddingVertical: 2,
-    borderRadius: 999,
+    borderRadius: radius.pill,
     overflow: "hidden",
+    textTransform: "capitalize",
   },
-  invoiceTag: { fontSize: 12, color: "#166534", fontWeight: "600" },
-  empty: { textAlign: "center", color: "#6b7280", marginTop: 40 },
+  invoiceTag: { fontSize: 12, color: colors.success, fontWeight: "700" },
+  empty: { textAlign: "center", color: colors.steel, marginTop: 40 },
 });

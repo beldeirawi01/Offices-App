@@ -11,6 +11,7 @@ import {
 } from "react-native";
 import { api, LineItem, VoiceNote } from "../api/client";
 import { RootStackParamList } from "../navigation/types";
+import { colors, radius, spacing } from "../theme";
 
 type Props = NativeStackScreenProps<RootStackParamList, "InvoiceReview">;
 
@@ -79,7 +80,7 @@ export default function InvoiceReviewScreen({ route, navigation }: Props) {
   if (!voiceNote) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#2563eb" />
+        <ActivityIndicator size="large" color={colors.signal} />
       </View>
     );
   }
@@ -137,53 +138,75 @@ export default function InvoiceReviewScreen({ route, navigation }: Props) {
       </View>
 
       <TouchableOpacity style={styles.primaryButton} onPress={onSendInvoice} disabled={saving}>
-        {saving ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryButtonText}>Send to client</Text>}
+        {saving ? <ActivityIndicator color={colors.white} /> : <Text style={styles.primaryButtonText}>Send to client</Text>}
       </TouchableOpacity>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#f5f6f8" },
-  centered: { flex: 1, justifyContent: "center", alignItems: "center", padding: 24, backgroundColor: "#f5f6f8" },
-  title: { fontSize: 22, fontWeight: "700", marginBottom: 12 },
-  transcriptLabel: { color: "#6b7280", fontSize: 12, textTransform: "uppercase", marginBottom: 4 },
-  transcript: { fontStyle: "italic", color: "#374151", marginBottom: 20 },
-  lineItem: {
-    backgroundColor: "#fff",
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 10,
-    borderWidth: 1,
-    borderColor: "#e2e4e9",
+  container: { flex: 1, backgroundColor: colors.paper },
+  centered: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: spacing.xl,
+    backgroundColor: colors.paper,
   },
-  descriptionInput: { fontSize: 15, fontWeight: "600", marginBottom: 8 },
-  lineItemRow: { flexDirection: "row", alignItems: "center", gap: 8 },
+  title: { fontSize: 22, fontWeight: "800", marginBottom: spacing.md, color: colors.ink },
+  transcriptLabel: { color: colors.steel, fontSize: 12, textTransform: "uppercase", marginBottom: 4, fontWeight: "600" },
+  transcript: { fontStyle: "italic", color: colors.steel, marginBottom: spacing.xl },
+  lineItem: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
+    padding: spacing.md,
+    marginBottom: spacing.sm + 2,
+    borderWidth: 1,
+    borderColor: colors.line,
+  },
+  descriptionInput: { fontSize: 15, fontWeight: "700", marginBottom: spacing.sm, color: colors.ink },
+  lineItemRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
   numberInput: {
     borderWidth: 1,
-    borderColor: "#e2e4e9",
-    borderRadius: 6,
+    borderColor: colors.lineStrong,
+    borderRadius: radius.sm - 2,
     padding: 6,
     width: 70,
     textAlign: "center",
   },
-  times: { color: "#6b7280" },
-  amount: { marginLeft: "auto", fontWeight: "700" },
-  notesLabel: { color: "#6b7280", fontSize: 12, textTransform: "uppercase", marginTop: 12, marginBottom: 4 },
+  times: { color: colors.steel },
+  amount: { marginLeft: "auto", fontWeight: "700", color: colors.ink },
+  notesLabel: {
+    color: colors.steel,
+    fontSize: 12,
+    textTransform: "uppercase",
+    marginTop: spacing.md,
+    marginBottom: 4,
+    fontWeight: "600",
+  },
   notesInput: {
-    backgroundColor: "#fff",
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: "#e2e4e9",
-    borderRadius: 8,
+    borderColor: colors.lineStrong,
+    borderRadius: radius.sm,
     padding: 10,
     minHeight: 60,
     textAlignVertical: "top",
   },
-  totalRow: { flexDirection: "row", justifyContent: "space-between", marginTop: 20, marginBottom: 20 },
-  totalLabel: { fontSize: 18, fontWeight: "700" },
-  totalValue: { fontSize: 18, fontWeight: "700" },
-  primaryButton: { backgroundColor: "#2563eb", borderRadius: 8, padding: 16, alignItems: "center" },
-  primaryButtonText: { color: "#fff", fontWeight: "700", fontSize: 16 },
-  doneTitle: { fontSize: 22, fontWeight: "700", marginBottom: 8 },
-  doneSub: { color: "#6b7280", marginBottom: 24, textAlign: "center" },
+  totalRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: spacing.xl,
+    marginBottom: spacing.xl,
+    borderTopWidth: 1,
+    borderTopColor: colors.lineStrong,
+    borderStyle: "dashed",
+    paddingTop: spacing.md,
+  },
+  totalLabel: { fontSize: 18, fontWeight: "700", color: colors.ink },
+  totalValue: { fontSize: 18, fontWeight: "700", color: colors.ink },
+  primaryButton: { backgroundColor: colors.signal, borderRadius: radius.sm, padding: spacing.lg, alignItems: "center" },
+  primaryButtonText: { color: colors.white, fontWeight: "700", fontSize: 16 },
+  doneTitle: { fontSize: 22, fontWeight: "800", marginBottom: spacing.sm, color: colors.ink },
+  doneSub: { color: colors.steel, marginBottom: spacing.xl, textAlign: "center" },
 });

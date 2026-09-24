@@ -4,6 +4,7 @@ import { ActivityIndicator, View } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { AuthProvider, useAuth } from "./src/context/AuthContext";
 import { RootStackParamList } from "./src/navigation/types";
+import { colors } from "./src/theme";
 import LoginScreen from "./src/screens/LoginScreen";
 import JobListScreen from "./src/screens/JobListScreen";
 import NewJobScreen from "./src/screens/NewJobScreen";
@@ -17,8 +18,8 @@ function RootNavigator() {
 
   if (loading) {
     return (
-      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-        <ActivityIndicator size="large" color="#2563eb" />
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: colors.paper }}>
+        <ActivityIndicator size="large" color={colors.signal} />
       </View>
     );
   }
@@ -28,7 +29,14 @@ function RootNavigator() {
   }
 
   return (
-    <Stack.Navigator>
+    <Stack.Navigator
+      screenOptions={{
+        headerStyle: { backgroundColor: colors.ink },
+        headerTintColor: colors.white,
+        headerTitleStyle: { fontWeight: "700" },
+        contentStyle: { backgroundColor: colors.paper },
+      }}
+    >
       <Stack.Screen name="JobList" component={JobListScreen} options={{ title: "Jobscribe" }} />
       <Stack.Screen name="NewJob" component={NewJobScreen} options={{ title: "New job" }} />
       <Stack.Screen name="Record" component={RecordScreen} options={{ title: "Record job note" }} />
@@ -45,7 +53,7 @@ export default function App() {
   return (
     <AuthProvider>
       <NavigationContainer>
-        <StatusBar style="auto" />
+        <StatusBar style="light" />
         <RootNavigator />
       </NavigationContainer>
     </AuthProvider>

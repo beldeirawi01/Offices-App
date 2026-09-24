@@ -12,6 +12,7 @@ import {
 import { api, Client, Paginated } from "../api/client";
 import { useAuth } from "../context/AuthContext";
 import { RootStackParamList } from "../navigation/types";
+import { colors, radius, spacing } from "../theme";
 
 type Props = NativeStackScreenProps<RootStackParamList, "NewJob">;
 
@@ -151,44 +152,44 @@ export default function NewJobScreen({ navigation }: Props) {
       {error && <Text style={styles.error}>{error}</Text>}
 
       <TouchableOpacity style={styles.startButton} onPress={onStart} disabled={creating}>
-        {creating ? <ActivityIndicator color="#fff" /> : <Text style={styles.startButtonText}>Start job</Text>}
+        {creating ? <ActivityIndicator color={colors.white} /> : <Text style={styles.startButtonText}>Start job</Text>}
       </TouchableOpacity>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#f5f6f8", padding: 16 },
-  label: { fontSize: 13, fontWeight: "700", color: "#6b7280", marginBottom: 6, marginTop: 12 },
+  container: { flex: 1, backgroundColor: colors.paper, padding: spacing.lg },
+  label: { fontSize: 13, fontWeight: "700", color: colors.steel, marginBottom: 6, marginTop: spacing.md },
   input: {
-    backgroundColor: "#fff",
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: "#e2e4e9",
-    borderRadius: 8,
-    padding: 12,
+    borderColor: colors.lineStrong,
+    borderRadius: radius.sm,
+    padding: spacing.md,
   },
   selectedClient: {
-    backgroundColor: "#fff",
-    borderRadius: 8,
-    padding: 12,
+    backgroundColor: colors.surface,
+    borderRadius: radius.sm,
+    padding: spacing.md,
     borderWidth: 1,
-    borderColor: "#e2e4e9",
+    borderColor: colors.lineStrong,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
   },
-  selectedClientName: { fontWeight: "600" },
-  changeLink: { color: "#2563eb", fontWeight: "600" },
-  resultsList: { maxHeight: 160, backgroundColor: "#fff", borderRadius: 8, marginTop: 4 },
-  resultRow: { padding: 12, borderBottomWidth: 1, borderBottomColor: "#f0f0f0" },
-  orLabel: { fontSize: 12, color: "#9ca3af", marginTop: 16, marginBottom: 6, textAlign: "center" },
-  error: { color: "#991b1b", marginTop: 12, textAlign: "center" },
+  selectedClientName: { fontWeight: "700", color: colors.ink },
+  changeLink: { color: colors.denim, fontWeight: "600" },
+  resultsList: { maxHeight: 160, backgroundColor: colors.surface, borderRadius: radius.sm, marginTop: 4 },
+  resultRow: { padding: spacing.md, borderBottomWidth: 1, borderBottomColor: colors.line },
+  orLabel: { fontSize: 12, color: colors.steelLight, marginTop: spacing.lg, marginBottom: 6, textAlign: "center" },
+  error: { color: colors.danger, marginTop: spacing.md, textAlign: "center" },
   startButton: {
-    backgroundColor: "#111827",
-    borderRadius: 10,
-    paddingVertical: 16,
+    backgroundColor: colors.signal,
+    borderRadius: radius.sm,
+    paddingVertical: spacing.lg,
     alignItems: "center",
-    marginTop: 24,
+    marginTop: spacing.xl,
   },
-  startButtonText: { color: "#fff", fontWeight: "700", fontSize: 16 },
+  startButtonText: { color: colors.white, fontWeight: "700", fontSize: 16 },
 });
