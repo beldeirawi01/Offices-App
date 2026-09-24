@@ -795,6 +795,103 @@ p.small {
   margin-bottom: 20px;
 }
 
+/* ---------- Info grid (job/client detail summary) ---------- */
+
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 18px;
+}
+
+.info-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.info-item .info-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-faint);
+}
+
+.info-item .info-label svg {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+
+.info-item .info-value {
+  font-size: 14.5px;
+  font-weight: 500;
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+
+/* ---------- Two-column invoice layout ---------- */
+
+.invoice-layout {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: 24px;
+  align-items: start;
+}
+
+.invoice-sidebar {
+  position: sticky;
+  top: 24px;
+  display: flex;
+  flex-direction: column;
+}
+
+.invoice-summary-card .invoice-totals {
+  max-width: none;
+  margin: 4px 0 18px;
+}
+
+.button-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.button-stack button {
+  width: 100%;
+  justify-content: center;
+}
+
+.delivery-log {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.delivery-log li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 13px;
+  gap: 8px;
+}
+
+@media (max-width: 900px) {
+  .invoice-layout {
+    grid-template-columns: 1fr;
+  }
+  .invoice-sidebar {
+    position: static;
+  }
+}
+
 .invoice-totals {
   max-width: 300px;
   margin: 16px 0;

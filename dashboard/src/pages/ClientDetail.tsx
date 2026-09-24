@@ -4,6 +4,7 @@ import { api, Client, Invoice, Job } from "../api/client";
 import { useToast } from "../components/Toast";
 import { useConfirm } from "../components/ConfirmDialog";
 import Spinner from "../components/Spinner";
+import { TrashIcon } from "../components/Icons";
 
 type ClientWithHistory = Client & { jobs: Job[]; invoices: Invoice[] };
 
@@ -86,7 +87,7 @@ export default function ClientDetail() {
             {editing ? "Cancel" : "Edit"}
           </button>
           <button className="btn-danger" onClick={onDelete} disabled={deleting}>
-            {deleting ? "Deleting..." : "Delete"}
+            <TrashIcon /> {deleting ? "Deleting..." : "Delete"}
           </button>
         </div>
       </div>
@@ -135,13 +136,25 @@ export default function ClientDetail() {
           </div>
         </form>
       ) : (
-        <div className="detail-meta card">
-          <div>{client.email ?? "No email"}</div>
-          <div>{client.phone ?? "No phone"}</div>
-          <div>{client.addressLine1 ?? "No address on file"}</div>
+        <div className="card info-grid">
+          <div className="info-item">
+            <span className="info-label">Email</span>
+            <span className="info-value">{client.email ?? "No email"}</span>
+          </div>
+          <div className="info-item">
+            <span className="info-label">Phone</span>
+            <span className="info-value">{client.phone ?? "No phone"}</span>
+          </div>
+          <div className="info-item">
+            <span className="info-label">Address</span>
+            <span className="info-value">{client.addressLine1 ?? "No address on file"}</span>
+          </div>
           {client.phone && (
-            <div className={client.smsConsent ? "consent-yes" : "consent-no"}>
-              {client.smsConsent ? "✓ SMS consent on file" : "✗ No SMS consent — texts won't be sent"}
+            <div className="info-item">
+              <span className="info-label">SMS consent</span>
+              <span className={`info-value ${client.smsConsent ? "consent-yes" : "consent-no"}`}>
+                {client.smsConsent ? "✓ On file" : "✗ Not consented"}
+              </span>
             </div>
           )}
         </div>
@@ -162,7 +175,7 @@ export default function ClientDetail() {
               <tr key={j.id}>
                 <td>{j.title}</td>
                 <td>
-                  <span className={`badge badge-${j.status.toLowerCase()}`}>{j.status}</span>
+                  <span className={`badge badge-${j.status.toLowerCase()}`}>{j.status.replace("_", " ").toLowerCase()}</span>
                 </td>
                 <td>{j.scheduledAt ? new Date(j.scheduledAt).toLocaleString() : "—"}</td>
               </tr>

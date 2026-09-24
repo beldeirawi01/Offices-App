@@ -1,6 +1,7 @@
 import { FormEvent, useEffect, useState } from "react";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import { api, Client, Job, Paginated } from "../api/client";
+import { PlusIcon, TrashIcon } from "../components/Icons";
 
 interface DraftLineItem {
   description: string;
@@ -141,13 +142,19 @@ export default function NewInvoice() {
                 <option value="PART">Part</option>
                 <option value="LABOR">Labor</option>
               </select>
-              <button type="button" className="btn-ghost" onClick={() => removeLineItem(i)} disabled={lineItems.length === 1}>
-                Remove
+              <button
+                type="button"
+                className="btn-ghost"
+                onClick={() => removeLineItem(i)}
+                disabled={lineItems.length === 1}
+                aria-label="Remove line item"
+              >
+                <TrashIcon />
               </button>
             </div>
           ))}
           <button type="button" className="btn-secondary" onClick={() => setLineItems((items) => [...items, emptyLineItem()])}>
-            + Add line item
+            <PlusIcon /> Add line item
           </button>
         </div>
 

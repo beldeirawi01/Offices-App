@@ -98,109 +98,124 @@ export default function InvoiceDetail() {
         ← Back to invoices
       </Link>
       <div className="page-header">
-        <h1>{invoice.invoiceNumber}</h1>
-        <span className={`badge badge-${invoice.status.toLowerCase()}`}>{invoice.status}</span>
-      </div>
-
-      <p>
-        Client: <Link to={`/clients/${invoice.client.id}`}>{invoice.client.name}</Link>
-      </p>
-
-      <div className="card">
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>Description</th>
-              <th>Kind</th>
-              <th>Qty</th>
-              <th>Unit price</th>
-              <th>Amount</th>
-            </tr>
-          </thead>
-          <tbody>
-            {invoice.lineItems.map((item) => (
-              <tr key={item.id}>
-                <td>{item.description}</td>
-                <td>{item.kind}</td>
-                <td>{item.quantity}</td>
-                <td>${item.unitPrice.toFixed(2)}</td>
-                <td>${item.amount.toFixed(2)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      <div className="invoice-totals">
         <div>
-          <span>Subtotal</span>
-          <span>${invoice.subtotal.toFixed(2)}</span>
-        </div>
-        <div>
-          <span>Tax</span>
-          <span>${invoice.tax.toFixed(2)}</span>
-        </div>
-        <div className="total-row">
-          <span>Total</span>
-          <span>${invoice.total.toFixed(2)}</span>
+          <h1>{invoice.invoiceNumber}</h1>
+          <p className="page-subtitle">
+            Billed to <Link to={`/clients/${invoice.client.id}`}>{invoice.client.name}</Link>
+          </p>
         </div>
       </div>
 
-      {invoice.notes && (
-        <div className="panel">
-          <h2>Notes</h2>
-          <p>{invoice.notes}</p>
-        </div>
-      )}
+      <div className="invoice-layout">
+        <div className="invoice-main">
+          <div className="card">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Description</th>
+                  <th>Kind</th>
+                  <th>Qty</th>
+                  <th>Unit price</th>
+                  <th>Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                {invoice.lineItems.map((item) => (
+                  <tr key={item.id}>
+                    <td>{item.description}</td>
+                    <td>{item.kind}</td>
+                    <td>{item.quantity}</td>
+                    <td>${item.unitPrice.toFixed(2)}</td>
+                    <td>${item.amount.toFixed(2)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
 
-      <div className="button-row">
-        {invoice.status === "DRAFT" && (
-          <button onClick={onSend} disabled={sending}>
-            {sending ? "Sending..." : "Send to client"}
-          </button>
-        )}
-        {invoice.status === "OVERDUE" && (
-          <button onClick={onSend} disabled={sending}>
-            {sending ? "Sending..." : "Resend reminder"}
-          </button>
-        )}
-        <button className="btn-secondary" onClick={onDownloadPdf}>
-          Download PDF
-        </button>
-        {(invoice.status === "SENT" || invoice.status === "OVERDUE") && (
-          <button className="btn-secondary" onClick={onMarkPaid} disabled={markingPaid}>
-            {markingPaid ? "Saving..." : "Mark as paid (cash/check)"}
-          </button>
-        )}
-        {canVoid && (
-          <button className="btn-danger" onClick={onVoid} disabled={voiding}>
-            {voiding ? "Voiding..." : "Void invoice"}
-          </button>
-        )}
+          {invoice.notes && (
+            <div className="panel">
+              <h2>Notes</h2>
+              <p>{invoice.notes}</p>
+            </div>
+          )}
+
+          {invoice.deliveries?.length > 0 && (
+            <div className="panel">
+              <h2>Delivery log</h2>
+              <ul className="delivery-log">
+                {invoice.deliveries.map((d, i) => (
+                  <li key={i}>
+                    <span>
+                      {d.channel} to {d.recipient}
+                    </span>
+                    <span className={d.success ? "consent-yes" : "consent-no"}>
+                      {d.success ? "Delivered" : "Failed"}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+
+        <aside className="invoice-sidebar">
+          <div className="panel invoice-summary-card">
+            <span className={`badge badge-${invoice.status.toLowerCase()}`}>{invoice.status}</span>
+
+            <div className="invoice-totals">
+              <div>
+                <span>Subtotal</span>
+                <span>${invoice.subtotal.toFixed(2)}</span>
+              </div>
+              <div>
+                <span>Tax</span>
+                <span>${invoice.tax.toFixed(2)}</span>
+              </div>
+              <div className="total-row">
+                <span>Total</span>
+                <span>${invoice.total.toFixed(2)}</span>
+              </div>
+            </div>
+
+            <div className="button-stack">
+              {invoice.status === "DRAFT" && (
+                <button onClick={onSend} disabled={sending}>
+                  {sending ? "Sending..." : "Send to client"}
+                </button>
+              )}
+              {invoice.status === "OVERDUE" && (
+                <button onClick={onSend} disabled={sending}>
+                  {sending ? "Sending..." : "Resend reminder"}
+                </button>
+              )}
+              <button className="btn-secondary" onClick={onDownloadPdf}>
+                Download PDF
+              </button>
+              {(invoice.status === "SENT" || invoice.status === "OVERDUE") && (
+                <button className="btn-secondary" onClick={onMarkPaid} disabled={markingPaid}>
+                  {markingPaid ? "Saving..." : "Mark as paid (cash/check)"}
+                </button>
+              )}
+              {canVoid && (
+                <button className="btn-danger" onClick={onVoid} disabled={voiding}>
+                  {voiding ? "Voiding..." : "Void invoice"}
+                </button>
+              )}
+            </div>
+          </div>
+
+          {canSend && (
+            <div className="panel">
+              <h2>Client-facing link</h2>
+              <p className="muted">This is the branded page the client sees when you send this invoice.</p>
+              <a href={publicUrl} target="_blank" rel="noreferrer" className="public-link">
+                {publicUrl}
+              </a>
+            </div>
+          )}
+        </aside>
       </div>
-
-      {canSend && (
-        <div className="panel">
-          <h2>Client-facing link</h2>
-          <p className="muted">This is the branded page the client sees when you send this invoice.</p>
-          <a href={publicUrl} target="_blank" rel="noreferrer" className="public-link">
-            {publicUrl}
-          </a>
-        </div>
-      )}
-
-      {invoice.deliveries?.length > 0 && (
-        <div className="panel">
-          <h2>Delivery log</h2>
-          <ul>
-            {invoice.deliveries.map((d, i) => (
-              <li key={i}>
-                {d.channel} to {d.recipient}: {d.success ? "delivered" : "failed"}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
     </div>
   );
 }

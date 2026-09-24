@@ -4,6 +4,7 @@ import { api, Client, Job, Paginated, Tech } from "../api/client";
 import { useToast } from "../components/Toast";
 import { useConfirm } from "../components/ConfirmDialog";
 import Spinner from "../components/Spinner";
+import { TrashIcon } from "../components/Icons";
 
 const STATUS_OPTIONS: Job["status"][] = ["SCHEDULED", "IN_PROGRESS", "COMPLETED", "CANCELLED"];
 
@@ -99,7 +100,7 @@ export default function JobDetail() {
             {editing ? "Cancel" : "Edit"}
           </button>
           <button className="btn-danger" onClick={onDelete} disabled={deleting}>
-            {deleting ? "Deleting..." : "Delete"}
+            <TrashIcon /> {deleting ? "Deleting..." : "Delete"}
           </button>
         </div>
       </div>
@@ -156,17 +157,41 @@ export default function JobDetail() {
           </div>
         </form>
       ) : (
-        <div className="detail-meta card">
-          <div>
-            Client: <Link to={`/clients/${job.client.id}`}>{job.client.name}</Link>
+        <div className="card info-grid">
+          <div className="info-item">
+            <span className="info-label">Client</span>
+            <span className="info-value">
+              <Link to={`/clients/${job.client.id}`}>{job.client.name}</Link>
+            </span>
           </div>
-          <div>Tech: {job.assignedTech?.name ?? "Unassigned"}</div>
-          <div>
-            Status: <span className={`badge badge-${job.status.toLowerCase()}`}>{job.status}</span>
+          <div className="info-item">
+            <span className="info-label">Status</span>
+            <span className="info-value">
+              <span className={`badge badge-${job.status.toLowerCase()}`}>{job.status.replace("_", " ").toLowerCase()}</span>
+            </span>
           </div>
-          <div>Scheduled: {job.scheduledAt ? new Date(job.scheduledAt).toLocaleString() : "Not scheduled"}</div>
-          {job.jobType && <div>Type: {job.jobType}</div>}
-          {job.addressLine1 && <div>Address: {job.addressLine1}</div>}
+          <div className="info-item">
+            <span className="info-label">Assigned tech</span>
+            <span className="info-value">{job.assignedTech?.name ?? "Unassigned"}</span>
+          </div>
+          <div className="info-item">
+            <span className="info-label">Scheduled</span>
+            <span className="info-value">
+              {job.scheduledAt ? new Date(job.scheduledAt).toLocaleString() : "Not scheduled"}
+            </span>
+          </div>
+          {job.jobType && (
+            <div className="info-item">
+              <span className="info-label">Job type</span>
+              <span className="info-value">{job.jobType}</span>
+            </div>
+          )}
+          {job.addressLine1 && (
+            <div className="info-item">
+              <span className="info-label">Address</span>
+              <span className="info-value">{job.addressLine1}</span>
+            </div>
+          )}
         </div>
       )}
 

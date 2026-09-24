@@ -4,7 +4,7 @@ import { useAuth } from "../context/AuthContext";
 import { useToast } from "../components/Toast";
 import { useConfirm } from "../components/ConfirmDialog";
 import Spinner from "../components/Spinner";
-import { PlusIcon } from "../components/Icons";
+import { PlusIcon, TrashIcon } from "../components/Icons";
 
 const emptyForm = { name: "", email: "", password: "", phone: "", role: "TECH" as "TECH" | "OWNER" };
 
@@ -163,7 +163,7 @@ export default function Team() {
                           onClick={() => onRemove(t)}
                           disabled={removingId === t.id}
                         >
-                          {removingId === t.id ? "Removing..." : "Remove"}
+                          <TrashIcon /> {removingId === t.id ? "Removing..." : "Remove"}
                         </button>
                       )}
                     </td>
