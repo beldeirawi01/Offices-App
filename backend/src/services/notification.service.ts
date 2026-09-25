@@ -110,6 +110,62 @@ export async function deliverInvoiceToClient(params: {
   return results;
 }
 
+/**
+ * Sends a drafted quote to the client for approval — same channel rules as
+ * invoice delivery, but pointing at the public quote page (accept/decline)
+ * rather than a payment link.
+ */
+export async function deliverQuoteToClient(params: {
+  clientEmail?: string | null;
+  clientPhone?: string | null;
+  clientSmsConsent: boolean;
+  quoteNumber: string;
+  pageUrl: string;
+  total: number;
+  businessName: string;
+}): Promise<DeliveryResult[]> {
+  const results: DeliveryResult[] = [];
+
+  if (params.clientPhone && params.clientSmsConsent) {
+    try {
+      await sendSms({
+        to: params.clientPhone,
+        body: `Your quote ${params.quoteNumber} for $${params.total.toFixed(2)} is ready to review: ${params.pageUrl}`,
+      });
+      results.push({ channel: "SMS", recipient: params.clientPhone, success: true });
+    } catch (err) {
+      results.push({
+        channel: "SMS",
+        recipient: params.clientPhone,
+        success: false,
+        error: err instanceof Error ? err.message : "Unknown error",
+      });
+    }
+  }
+
+  if (params.clientEmail) {
+    try {
+      await sendEmail({
+        to: params.clientEmail,
+        fromName: params.businessName,
+        subject: `Quote ${params.quoteNumber} — $${params.total.toFixed(2)}`,
+        text: `Your quote ${params.quoteNumber} for $${params.total.toFixed(2)} is ready to review.\n\nView and respond: ${params.pageUrl}`,
+        html: `<p>Your quote <strong>${params.quoteNumber}</strong> for <strong>$${params.total.toFixed(2)}</strong> is ready to review.</p><p><a href="${params.pageUrl}">View quote</a></p>`,
+      });
+      results.push({ channel: "EMAIL", recipient: params.clientEmail, success: true });
+    } catch (err) {
+      results.push({
+        channel: "EMAIL",
+        recipient: params.clientEmail,
+        success: false,
+        error: err instanceof Error ? err.message : "Unknown error",
+      });
+    }
+  }
+
+  return results;
+}
+
 /** Sends a payment reminder for an overdue invoice, same channel rules as delivery. */
 export async function sendInvoiceReminder(params: {
   clientEmail?: string | null;

@@ -27,6 +27,14 @@ enum InvoiceStatus {
   VOID
 }
 
+enum QuoteStatus {
+  DRAFT
+  SENT
+  ACCEPTED
+  DECLINED
+  CONVERTED
+}
+
 enum PaymentStatus {
   PENDING
   SUCCEEDED
@@ -61,6 +69,7 @@ model Organization {
   clients  Client[]
   jobs     Job[]
   invoices Invoice[]
+  quotes   Quote[]
 }
 
 model User {
@@ -99,6 +108,7 @@ model Client {
 
   jobs     Job[]
   invoices Invoice[]
+  quotes   Quote[]
 
   @@index([organizationId])
 }
@@ -125,6 +135,7 @@ model Job {
 
   voiceNotes VoiceNote[]
   invoice    Invoice?
+  quote      Quote?
 
   @@index([organizationId])
   @@index([clientId])
@@ -140,6 +151,11 @@ model VoiceNote {
   extractedJson  Json?
   status         String   @default("UPLOADED") // UPLOADED, TRANSCRIBING, TRANSCRIBED, EXTRACTING, EXTRACTED, FAILED
   errorMessage   String?
+  // QUOTE (pre-job estimate, spoken on arrival) or INVOICE (post-job actuals,
+  // spoken on completion) — routes to a different Claude extraction prompt
+  // and drafts a Quote vs an Invoice. Defaults to INVOICE for backward
+  // compatibility with recordings made before quotes existed.
+  purpose        String   @default("INVOICE")
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 }
@@ -193,6 +209,67 @@ model LineItem {
   createdAt   DateTime @default(now())
 
   @@index([invoiceId])
+}
+
+model Quote {
+  id             String       @id @default(cuid())
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  organizationId String
+  client         Client       @relation(fields: [clientId], references: [id])
+  clientId       String
+  job            Job?         @relation(fields: [jobId], references: [id])
+  jobId          String?      @unique
+  quoteNumber    String       @unique
+  // Unguessable token for the client-facing quote page (view + accept/decline),
+  // same pattern as Invoice.publicToken.
+  publicToken    String       @unique @default(cuid())
+  status         QuoteStatus  @default(DRAFT)
+  laborHours     Float?
+  laborRate      Float?
+  subtotal       Float        @default(0)
+  tax            Float        @default(0)
+  total          Float        @default(0)
+  notes          String?
+  sentAt         DateTime?
+  respondedAt    DateTime?
+  // Set once a tech marks the job complete (or the owner manually converts)
+  // and this quote becomes an invoice — never re-converted after that.
+  convertedInvoiceId String?  @unique
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  lineItems  QuoteLineItem[]
+  deliveries QuoteDelivery[]
+
+  @@index([organizationId])
+  @@index([clientId])
+}
+
+model QuoteLineItem {
+  id          String   @id @default(cuid())
+  quote       Quote    @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  quoteId     String
+  description String
+  quantity    Float    @default(1)
+  unitPrice   Float
+  amount      Float
+  kind        String   @default("PART") // PART or LABOR
+  createdAt   DateTime @default(now())
+
+  @@index([quoteId])
+}
+
+model QuoteDelivery {
+  id           String          @id @default(cuid())
+  quote        Quote           @relation(fields: [quoteId], references: [id])
+  quoteId      String
+  channel      DeliveryChannel
+  recipient    String
+  success      Boolean
+  errorMessage String?
+  createdAt    DateTime        @default(now())
+
+  @@index([quoteId])
 }
 
 model Payment {

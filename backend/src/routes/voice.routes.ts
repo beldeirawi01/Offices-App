@@ -6,8 +6,9 @@ import { prisma } from "../db/prisma";
 import { requireAuth } from "../middleware/auth";
 import { HttpError } from "../middleware/errorHandler";
 import { transcribeAudio } from "../services/transcription.service";
-import { extractJobDetails } from "../services/extraction.service";
+import { extractJobDetails, extractQuoteDetails } from "../services/extraction.service";
 import { createDraftInvoiceFromExtraction } from "../services/invoice.service";
+import { createDraftQuoteFromExtraction } from "../services/quote.service";
 import { storeVoiceNoteAudio, getVoiceNoteAudioLocalPath, isCloudStorageConfigured, localUploadDir } from "../services/storage.service";
 
 export const voiceRouter = Router();
@@ -44,6 +45,10 @@ voiceRouter.post("/jobs/:jobId/voice-notes", requireAuth, upload.single("audio")
     throw new HttpError(400, "Missing audio file field 'audio'");
   }
 
+  // QUOTE (on-arrival estimate) or INVOICE (post-job actuals, the default —
+  // keeps older mobile app builds that don't send this field working).
+  const purpose = req.body.purpose === "QUOTE" ? "QUOTE" : "INVOICE";
+
   const job = await prisma.job.findFirst({
     where: { id: req.params.jobId, organizationId: req.auth!.organizationId },
     include: { client: true },
@@ -57,6 +62,7 @@ voiceRouter.post("/jobs/:jobId/voice-notes", requireAuth, upload.single("audio")
       jobId: job.id,
       audioUrl: stored.storageKey,
       status: "UPLOADED",
+      purpose,
     },
   });
 
@@ -64,7 +70,7 @@ voiceRouter.post("/jobs/:jobId/voice-notes", requireAuth, upload.single("audio")
 
   // Process asynchronously so the tech isn't stuck waiting on-site;
   // the mobile app polls GET /voice-notes/:id for the result.
-  processVoiceNote(voiceNote.id, stored.storageKey, job.id, job.organizationId, job.clientId).catch((err) => {
+  processVoiceNote(voiceNote.id, stored.storageKey, job.id, job.organizationId, job.clientId, purpose).catch((err) => {
     console.error(`Voice note ${voiceNote.id} processing failed`, err);
   });
 });
@@ -75,6 +81,7 @@ async function processVoiceNote(
   jobId: string,
   organizationId: string,
   clientId: string,
+  purpose: "QUOTE" | "INVOICE",
 ) {
   let localPath: string | null = null;
   try {
@@ -87,15 +94,22 @@ async function processVoiceNote(
     });
 
     await prisma.voiceNote.update({ where: { id: voiceNoteId }, data: { status: "EXTRACTING" } });
-    const extracted = await extractJobDetails(transcript);
+    const extracted = purpose === "QUOTE" ? await extractQuoteDetails(transcript) : await extractJobDetails(transcript);
     await prisma.voiceNote.update({
       where: { id: voiceNoteId },
       data: { status: "EXTRACTED", extractedJson: extracted as any },
     });
 
-    const existingInvoice = await prisma.invoice.findUnique({ where: { jobId } });
-    if (!existingInvoice) {
-      await createDraftInvoiceFromExtraction({ organizationId, clientId, jobId, extracted });
+    if (purpose === "QUOTE") {
+      const existingQuote = await prisma.quote.findUnique({ where: { jobId } });
+      if (!existingQuote) {
+        await createDraftQuoteFromExtraction({ organizationId, clientId, jobId, extracted });
+      }
+    } else {
+      const existingInvoice = await prisma.invoice.findUnique({ where: { jobId } });
+      if (!existingInvoice) {
+        await createDraftInvoiceFromExtraction({ organizationId, clientId, jobId, extracted });
+      }
     }
   } catch (err) {
     await prisma.voiceNote.update({
@@ -113,7 +127,14 @@ async function processVoiceNote(
 voiceRouter.get("/voice-notes/:id", requireAuth, async (req, res) => {
   const voiceNote = await prisma.voiceNote.findFirst({
     where: { id: req.params.id, job: { organizationId: req.auth!.organizationId } },
-    include: { job: { include: { invoice: { include: { lineItems: true } } } } },
+    include: {
+      job: {
+        include: {
+          invoice: { include: { lineItems: true } },
+          quote: { include: { lineItems: true } },
+        },
+      },
+    },
   });
   if (!voiceNote) throw new HttpError(404, "Voice note not found");
   res.json(voiceNote);

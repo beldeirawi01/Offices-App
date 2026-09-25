@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "../db/prisma";
 import { requireAuth } from "../middleware/auth";
 import { HttpError } from "../middleware/errorHandler";
+import { convertQuoteToInvoice } from "../services/quote.service";
 
 export const jobsRouter = Router();
 jobsRouter.use(requireAuth);
@@ -28,7 +29,7 @@ jobsRouter.get("/", async (req, res) => {
   const [jobs, total] = await Promise.all([
     prisma.job.findMany({
       where,
-      include: { client: true, assignedTech: true, invoice: true },
+      include: { client: true, assignedTech: true, invoice: true, quote: true },
       orderBy: { scheduledAt: "asc" },
       skip,
       take,
@@ -41,7 +42,13 @@ jobsRouter.get("/", async (req, res) => {
 jobsRouter.get("/:id", async (req, res) => {
   const job = await prisma.job.findFirst({
     where: { id: req.params.id, organizationId: req.auth!.organizationId },
-    include: { client: true, assignedTech: true, voiceNotes: true, invoice: { include: { lineItems: true } } },
+    include: {
+      client: true,
+      assignedTech: true,
+      voiceNotes: true,
+      invoice: { include: { lineItems: true } },
+      quote: { include: { lineItems: true } },
+    },
   });
   if (!job) throw new HttpError(404, "Job not found");
   res.json(job);
@@ -103,6 +110,23 @@ jobsRouter.put("/:id", async (req, res) => {
       completedAt: body.status === "COMPLETED" ? new Date() : existing.completedAt,
     },
   });
+
+  // Newly marked complete, with an accepted quote still waiting to become an
+  // invoice — convert it automatically so the tech doesn't have to remember
+  // to do it by hand. Failure here shouldn't fail the job update itself
+  // (e.g. a quote already converted, or the tech also created a manual
+  // invoice in the meantime) — just log it.
+  if (body.status === "COMPLETED" && existing.status !== "COMPLETED") {
+    const quote = await prisma.quote.findUnique({ where: { jobId: job.id } });
+    if (quote && quote.status === "ACCEPTED") {
+      try {
+        await convertQuoteToInvoice(quote.id);
+      } catch (err) {
+        console.error(`Auto-convert of quote ${quote.id} on job completion failed`, err);
+      }
+    }
+  }
+
   res.json(job);
 });
 

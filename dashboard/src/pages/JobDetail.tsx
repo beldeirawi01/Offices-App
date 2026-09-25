@@ -196,6 +196,24 @@ export default function JobDetail() {
       )}
 
       <section className="panel">
+        <h2>Quote</h2>
+        {job.quote ? (
+          <p>
+            <Link to={`/quotes/${job.quote.id}`}>{job.quote.quoteNumber}</Link> —{" "}
+            <span className={`badge badge-${job.quote.status.toLowerCase()}`}>{job.quote.status.toLowerCase()}</span> — $
+            {job.quote.total.toFixed(2)}
+          </p>
+        ) : (
+          <div>
+            <p className="muted">No quote yet for this job.</p>
+            <Link to={`/quotes/new?clientId=${job.client.id}&jobId=${job.id}`}>
+              <button type="button">+ Create quote for this job</button>
+            </Link>
+          </div>
+        )}
+      </section>
+
+      <section className="panel">
         <h2>Invoice</h2>
         {job.invoice ? (
           <p>
@@ -219,7 +237,9 @@ export default function JobDetail() {
           <ul className="bar-list">
             {job.voiceNotes.map((vn) => (
               <li key={vn.id}>
-                <span>{new Date(vn.createdAt).toLocaleString()}</span>
+                <span>
+                  {vn.purpose === "QUOTE" ? "Quote" : "Invoice"} note — {new Date(vn.createdAt).toLocaleString()}
+                </span>
                 <span className={`badge ${vn.status === "FAILED" ? "badge-overdue" : "badge-scheduled"}`}>{vn.status}</span>
               </li>
             ))}

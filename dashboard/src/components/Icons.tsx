@@ -63,6 +63,16 @@ export function InvoiceIcon(props: IconProps) {
   );
 }
 
+export function QuoteIcon(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M6.5 3h9L19 6.5V20a1 1 0 0 1-1 1H6.5a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z" />
+      <path d="M15 3v4h4" />
+      <path d="m9 14 2 2 4-4.5" />
+    </svg>
+  );
+}
+
 export function TeamIcon(props: IconProps) {
   return (
     <svg {...base} {...props}>

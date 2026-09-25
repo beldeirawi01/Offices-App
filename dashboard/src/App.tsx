@@ -15,9 +15,13 @@ import JobDetail from "./pages/JobDetail";
 import Invoices from "./pages/Invoices";
 import NewInvoice from "./pages/NewInvoice";
 import InvoiceDetail from "./pages/InvoiceDetail";
+import Quotes from "./pages/Quotes";
+import NewQuote from "./pages/NewQuote";
+import QuoteDetail from "./pages/QuoteDetail";
 import Team from "./pages/Team";
 import Settings from "./pages/Settings";
 import PublicInvoice from "./pages/PublicInvoice";
+import PublicQuote from "./pages/PublicQuote";
 import { TermsOfService, PrivacyPolicy } from "./pages/Legal";
 
 function ProtectedRoute({ children }: { children: JSX.Element }) {
@@ -40,6 +44,7 @@ export default function App() {
               <Route path="/terms" element={<TermsOfService />} />
               <Route path="/privacy" element={<PrivacyPolicy />} />
               <Route path="/pay/:token" element={<PublicInvoice />} />
+              <Route path="/quotes/view/:token" element={<PublicQuote />} />
               <Route
                 path="/"
                 element={
@@ -53,6 +58,9 @@ export default function App() {
                 <Route path="jobs/:id" element={<JobDetail />} />
                 <Route path="clients" element={<Clients />} />
                 <Route path="clients/:id" element={<ClientDetail />} />
+                <Route path="quotes" element={<Quotes />} />
+                <Route path="quotes/new" element={<NewQuote />} />
+                <Route path="quotes/:id" element={<QuoteDetail />} />
                 <Route path="invoices" element={<Invoices />} />
                 <Route path="invoices/new" element={<NewInvoice />} />
                 <Route path="invoices/:id" element={<InvoiceDetail />} />

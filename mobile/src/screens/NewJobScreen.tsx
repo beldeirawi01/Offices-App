@@ -77,7 +77,10 @@ export default function NewJobScreen({ navigation }: Props) {
         status: "IN_PROGRESS",
       });
 
-      navigation.replace("Record", { jobId: job.id, jobTitle: job.title });
+      // Walk-ins are created already IN_PROGRESS (the tech is on-site doing
+      // the work now, not quoting it for later), so this goes straight to
+      // the completion note rather than an on-arrival quote.
+      navigation.replace("Record", { jobId: job.id, jobTitle: job.title, purpose: "INVOICE" });
     } catch (err: any) {
       setError(err?.response?.data?.error ?? "Could not start this job. Try again.");
     } finally {

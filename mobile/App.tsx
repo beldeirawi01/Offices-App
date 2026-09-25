@@ -9,6 +9,7 @@ import LoginScreen from "./src/screens/LoginScreen";
 import JobListScreen from "./src/screens/JobListScreen";
 import NewJobScreen from "./src/screens/NewJobScreen";
 import RecordScreen from "./src/screens/RecordScreen";
+import QuoteReviewScreen from "./src/screens/QuoteReviewScreen";
 import InvoiceReviewScreen from "./src/screens/InvoiceReviewScreen";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -39,7 +40,16 @@ function RootNavigator() {
     >
       <Stack.Screen name="JobList" component={JobListScreen} options={{ title: "Jobscribe" }} />
       <Stack.Screen name="NewJob" component={NewJobScreen} options={{ title: "New job" }} />
-      <Stack.Screen name="Record" component={RecordScreen} options={{ title: "Record job note" }} />
+      <Stack.Screen
+        name="Record"
+        component={RecordScreen}
+        options={({ route }) => ({ title: route.params.purpose === "QUOTE" ? "Record quote" : "Record job note" })}
+      />
+      <Stack.Screen
+        name="QuoteReview"
+        component={QuoteReviewScreen}
+        options={{ title: "Review quote", headerBackVisible: false }}
+      />
       <Stack.Screen
         name="InvoiceReview"
         component={InvoiceReviewScreen}

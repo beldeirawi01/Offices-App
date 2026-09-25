@@ -1,11 +1,22 @@
 import { NavLink, Outlet } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { BrandMark, HomeIcon, CalendarIcon, UsersIcon, InvoiceIcon, TeamIcon, SettingsIcon, LogoutIcon } from "./Icons";
+import {
+  BrandMark,
+  HomeIcon,
+  CalendarIcon,
+  UsersIcon,
+  QuoteIcon,
+  InvoiceIcon,
+  TeamIcon,
+  SettingsIcon,
+  LogoutIcon,
+} from "./Icons";
 
 const NAV_ITEMS = [
   { to: "/", label: "Dashboard", icon: HomeIcon, end: true },
   { to: "/jobs", label: "Scheduling", icon: CalendarIcon },
   { to: "/clients", label: "Clients", icon: UsersIcon },
+  { to: "/quotes", label: "Quotes", icon: QuoteIcon },
   { to: "/invoices", label: "Invoices", icon: InvoiceIcon },
   { to: "/team", label: "Team", icon: TeamIcon },
   { to: "/settings", label: "Settings", icon: SettingsIcon },

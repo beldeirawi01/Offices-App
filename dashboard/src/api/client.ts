@@ -75,9 +75,27 @@ export interface Invoice {
   lineItems: LineItem[];
 }
 
+export interface Quote {
+  id: string;
+  quoteNumber: string;
+  publicToken: string;
+  status: "DRAFT" | "SENT" | "ACCEPTED" | "DECLINED" | "CONVERTED";
+  subtotal: number;
+  tax: number;
+  total: number;
+  notes?: string | null;
+  sentAt?: string | null;
+  respondedAt?: string | null;
+  convertedInvoiceId?: string | null;
+  createdAt: string;
+  client: Client;
+  lineItems: LineItem[];
+}
+
 export interface VoiceNote {
   id: string;
   status: string;
+  purpose?: "QUOTE" | "INVOICE";
   transcript?: string | null;
   errorMessage?: string | null;
   createdAt: string;
@@ -98,6 +116,7 @@ export interface Job {
   client: Client;
   assignedTech?: { id: string; name: string } | null;
   invoice?: Invoice | null;
+  quote?: Quote | null;
   voiceNotes?: VoiceNote[];
 }
 

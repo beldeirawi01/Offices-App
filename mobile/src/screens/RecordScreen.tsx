@@ -11,7 +11,8 @@ type Props = NativeStackScreenProps<RootStackParamList, "Record">;
 type RecordingState = "idle" | "recording" | "uploading" | "processing" | "error";
 
 export default function RecordScreen({ route, navigation }: Props) {
-  const { jobId, jobTitle } = route.params;
+  const { jobId, jobTitle, purpose } = route.params;
+  const isQuote = purpose === "QUOTE";
   const [state, setState] = useState<RecordingState>("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const recordingRef = useRef<Audio.Recording | null>(null);
@@ -58,6 +59,7 @@ export default function RecordScreen({ route, navigation }: Props) {
         name: "job-note.m4a",
         type: "audio/m4a",
       } as any);
+      formData.append("purpose", purpose);
 
       const { data } = await api.post(`/jobs/${jobId}/voice-notes`, formData, {
         headers: { "Content-Type": "multipart/form-data" },
@@ -77,7 +79,7 @@ export default function RecordScreen({ route, navigation }: Props) {
         const { data } = await api.get(`/voice-notes/${voiceNoteId}`);
         if (data.status === "EXTRACTED") {
           if (pollRef.current) clearInterval(pollRef.current);
-          navigation.replace("InvoiceReview", { voiceNoteId });
+          navigation.replace(isQuote ? "QuoteReview" : "InvoiceReview", { voiceNoteId });
         } else if (data.status === "FAILED") {
           if (pollRef.current) clearInterval(pollRef.current);
           setState("error");
@@ -94,11 +96,14 @@ export default function RecordScreen({ route, navigation }: Props) {
   return (
     <View style={styles.container}>
       <Text style={styles.jobTitle}>{jobTitle}</Text>
+      <Text style={styles.modeLabel}>{isQuote ? "ON-ARRIVAL QUOTE" : "JOB COMPLETION"}</Text>
 
       {state === "idle" && (
         <>
           <Text style={styles.instructions}>
-            Tap record and describe the job: customer, work done, time spent, and any parts used.
+            {isQuote
+              ? "Tap record and give a rough estimate: the work needed, about how long it'll take, and roughly what it'll cost."
+              : "Tap record and describe the job: customer, work done, time spent, and any parts used."}
           </Text>
           <TouchableOpacity style={styles.recordButton} onPress={startRecording}>
             <Text style={styles.recordButtonText}>● Record</Text>
@@ -110,7 +115,7 @@ export default function RecordScreen({ route, navigation }: Props) {
         <>
           <Text style={styles.recordingLabel}>Recording…</Text>
           <TouchableOpacity style={[styles.recordButton, styles.stopButton]} onPress={stopAndUpload}>
-            <Text style={styles.recordButtonText}>■ Stop &amp; Generate Invoice</Text>
+            <Text style={styles.recordButtonText}>■ Stop &amp; {isQuote ? "Generate Quote" : "Generate Invoice"}</Text>
           </TouchableOpacity>
         </>
       )}
@@ -119,7 +124,11 @@ export default function RecordScreen({ route, navigation }: Props) {
         <View style={styles.centered}>
           <ActivityIndicator size="large" color={colors.signal} />
           <Text style={styles.processingLabel}>
-            {state === "uploading" ? "Uploading voice note…" : "Transcribing and building your invoice…"}
+            {state === "uploading"
+              ? "Uploading voice note…"
+              : isQuote
+                ? "Transcribing and building your quote…"
+                : "Transcribing and building your invoice…"}
           </Text>
         </View>
       )}
@@ -138,7 +147,15 @@ export default function RecordScreen({ route, navigation }: Props) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.paper, padding: spacing.xl, justifyContent: "center" },
-  jobTitle: { fontSize: 20, fontWeight: "800", textAlign: "center", marginBottom: spacing.lg, color: colors.ink },
+  jobTitle: { fontSize: 20, fontWeight: "800", textAlign: "center", marginBottom: 2, color: colors.ink },
+  modeLabel: {
+    fontSize: 11,
+    fontWeight: "700",
+    textAlign: "center",
+    marginBottom: spacing.lg,
+    color: colors.signal,
+    letterSpacing: 0.6,
+  },
   instructions: { color: colors.steel, textAlign: "center", marginBottom: spacing.xxl },
   recordButton: {
     backgroundColor: colors.danger,

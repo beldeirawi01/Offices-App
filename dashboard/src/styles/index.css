@@ -817,6 +817,24 @@ p.small {
   border-left-color: var(--warning);
 }
 
+.badge-accepted {
+  background: var(--success-bg);
+  color: var(--success);
+  border-left-color: var(--success);
+}
+
+.badge-declined {
+  background: var(--danger-bg);
+  color: var(--danger);
+  border-left-color: var(--danger);
+}
+
+.badge-converted {
+  background: var(--info-bg);
+  color: var(--info);
+  border-left-color: var(--info);
+}
+
 .status-select {
   border: none;
   font-size: 12px;

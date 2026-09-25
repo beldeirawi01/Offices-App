@@ -56,17 +56,38 @@ Rules:
 - Keep "summary" to 1-3 sentences describing the work performed, written for a client-facing invoice.
 - Never invent a customer name, part, or price that wasn't mentioned or clearly implied.`;
 
-/**
- * Sends a raw transcript to Claude and gets back clean, structured
- * billing data the backend can turn directly into an invoice draft.
- */
-export async function extractJobDetails(transcript: string): Promise<ExtractedJob> {
+// Same shape as an invoice extraction, but the tech is speaking BEFORE doing
+// the work — an on-arrival estimate, not a record of what was actually done.
+const QUOTE_SYSTEM_PROMPT = `You extract structured estimate data from a field technician's spoken on-site assessment, given BEFORE any work is performed.
+Return ONLY valid JSON matching this exact shape, with no markdown fences and no commentary:
+
+{
+  "customerName": string | null,
+  "jobType": string | null,
+  "summary": string,
+  "laborHours": number | null,
+  "laborRate": number | null,
+  "lineItems": [
+    { "description": string, "quantity": number, "unitPrice": number, "kind": "PART" | "LABOR" }
+  ],
+  "notes": string | null
+}
+
+Rules:
+- This is a pre-job ESTIMATE, not actuals — the tech is giving approximate pricing for work not yet done. Round numbers and rough estimates ("about 2 hours", "roughly $280") are expected and should be used as given.
+- Only include a lineItem for parts/materials/labor actually mentioned.
+- Report labor in exactly one place, never both: either laborHours + laborRate, OR a single "kind": "LABOR" lineItem — never both for the same work.
+- Infer quantity/unitPrice from context; default quantity to 1 if unclear.
+- Keep "summary" to 1-3 sentences describing the proposed work, written for a client-facing quote.
+- Never invent a customer name, part, or price that wasn't mentioned or clearly implied.`;
+
+async function runExtraction(transcript: string, systemPrompt: string): Promise<ExtractedJob> {
   const anthropic = getClient();
 
   const message = await anthropic.messages.create({
     model: env.anthropicModel,
     max_tokens: 2048,
-    system: SYSTEM_PROMPT,
+    system: systemPrompt,
     messages: [{ role: "user", content: transcript }],
   });
 
@@ -82,6 +103,22 @@ export async function extractJobDetails(transcript: string): Promise<ExtractedJo
   const jsonText = extractJsonFromText(textBlock.text);
   const parsed = JSON.parse(jsonText);
   return extractedJobSchema.parse(parsed);
+}
+
+/**
+ * Sends a raw transcript to Claude and gets back clean, structured
+ * billing data the backend can turn directly into an invoice draft.
+ */
+export async function extractJobDetails(transcript: string): Promise<ExtractedJob> {
+  return runExtraction(transcript, SYSTEM_PROMPT);
+}
+
+/**
+ * Same shape, but for a pre-job estimate spoken on arrival — used to draft a
+ * quote rather than an invoice.
+ */
+export async function extractQuoteDetails(transcript: string): Promise<ExtractedJob> {
+  return runExtraction(transcript, QUOTE_SYSTEM_PROMPT);
 }
 
 export function extractJsonFromText(text: string): string {

@@ -51,19 +51,29 @@ export default function JobListScreen({ navigation }: Props) {
         ListEmptyComponent={
           !loading ? <Text style={styles.empty}>No jobs assigned to you yet.</Text> : null
         }
-        renderItem={({ item }) => (
-          <TouchableOpacity
-            style={styles.card}
-            onPress={() => navigation.navigate("Record", { jobId: item.id, jobTitle: item.title })}
-          >
-            <Text style={styles.cardTitle}>{item.title}</Text>
-            <Text style={styles.cardSub}>{item.client.name}</Text>
-            <View style={styles.rowBetween}>
-              <Text style={styles.badge}>{item.status.replace("_", " ").toLowerCase()}</Text>
-              {item.invoice && <Text style={styles.invoiceTag}>Invoice ready</Text>}
-            </View>
-          </TouchableOpacity>
-        )}
+        renderItem={({ item }) => {
+          // No quote yet: the tech is still on arrival, giving a price before
+          // starting work. Once a quote exists, subsequent recordings are
+          // the post-job completion note that drafts the invoice.
+          const purpose: "QUOTE" | "INVOICE" = item.quote ? "INVOICE" : "QUOTE";
+          return (
+            <TouchableOpacity
+              style={styles.card}
+              onPress={() => navigation.navigate("Record", { jobId: item.id, jobTitle: item.title, purpose })}
+            >
+              <Text style={styles.cardTitle}>{item.title}</Text>
+              <Text style={styles.cardSub}>{item.client.name}</Text>
+              <View style={styles.rowBetween}>
+                <Text style={styles.badge}>{item.status.replace("_", " ").toLowerCase()}</Text>
+                <View style={styles.tagRow}>
+                  {item.quote && <Text style={styles.quoteTag}>Quote {item.quote.status.toLowerCase()}</Text>}
+                  {item.invoice && <Text style={styles.invoiceTag}>Invoice ready</Text>}
+                </View>
+              </View>
+              <Text style={styles.actionHint}>{purpose === "QUOTE" ? "Tap to record a quote" : "Tap to record completion note"}</Text>
+            </TouchableOpacity>
+          );
+        }}
       />
     </View>
   );
@@ -106,6 +116,9 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     textTransform: "capitalize",
   },
+  tagRow: { flexDirection: "row", gap: spacing.sm },
   invoiceTag: { fontSize: 12, color: colors.success, fontWeight: "700" },
+  quoteTag: { fontSize: 12, color: colors.denim, fontWeight: "700" },
+  actionHint: { fontSize: 12, color: colors.steelLight, marginTop: spacing.sm },
   empty: { textAlign: "center", color: colors.steel, marginTop: 40 },
 });
