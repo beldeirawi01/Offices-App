@@ -9,6 +9,9 @@ import {
   createOnboardingLink,
   createExpressDashboardLink,
   getAccountStatus,
+  createBillingCustomer,
+  createSubscriptionCheckoutSession,
+  createBillingPortalLink,
 } from "../services/payment.service";
 
 export const organizationsRouter = Router();
@@ -93,5 +96,37 @@ organizationsRouter.get("/me/stripe/dashboard-link", requireOwner, async (req, r
   if (!org.stripeAccountId) throw new HttpError(400, "Connect a Stripe account first");
 
   const url = await createExpressDashboardLink(org.stripeAccountId);
+  res.json({ url });
+});
+
+// Starts Stripe Checkout for Jobscribe's own flat $29/month subscription —
+// distinct from the client-payment Stripe Connect flow above. Creates the
+// platform-side billing Customer on first call.
+organizationsRouter.post("/me/subscription/checkout", requireOwner, async (req, res) => {
+  const org = await prisma.organization.findUniqueOrThrow({ where: { id: req.auth!.organizationId } });
+
+  let customerId = org.stripeCustomerId;
+  if (!customerId) {
+    const owner = await prisma.user.findUniqueOrThrow({ where: { id: req.auth!.userId } });
+    customerId = await createBillingCustomer(owner.email, org.id);
+    await prisma.organization.update({ where: { id: org.id }, data: { stripeCustomerId: customerId } });
+  }
+
+  const url = await createSubscriptionCheckoutSession({
+    organizationId: org.id,
+    customerId,
+    successUrl: `${env.appBaseUrl}/settings?subscription=return`,
+    cancelUrl: `${env.appBaseUrl}/settings?subscription=cancelled`,
+  });
+  res.json({ url });
+});
+
+// A link into Stripe's hosted Billing Portal to update card details, view
+// past invoices, or cancel — not something we build ourselves.
+organizationsRouter.get("/me/subscription/portal", requireOwner, async (req, res) => {
+  const org = await prisma.organization.findUniqueOrThrow({ where: { id: req.auth!.organizationId } });
+  if (!org.stripeCustomerId) throw new HttpError(400, "No subscription has been started yet");
+
+  const url = await createBillingPortalLink(org.stripeCustomerId, `${env.appBaseUrl}/settings`);
   res.json({ url });
 });

@@ -2,11 +2,13 @@ import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../db/prisma";
 import { requireAuth } from "../middleware/auth";
+import { requireActiveSubscription } from "../middleware/subscription";
 import { HttpError } from "../middleware/errorHandler";
 import { convertQuoteToInvoice } from "../services/quote.service";
 
 export const jobsRouter = Router();
 jobsRouter.use(requireAuth);
+jobsRouter.use(requireActiveSubscription);
 
 const MAX_PAGE_SIZE = 100;
 function parsePagination(query: Record<string, unknown>) {

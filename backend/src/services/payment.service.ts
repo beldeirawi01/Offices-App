@@ -117,6 +117,75 @@ export async function createPaymentLinkForInvoice(params: {
   return { id: link.id, url: link.url };
 }
 
+/**
+ * Creates a Stripe Customer on our own platform account for a business's
+ * Jobscribe subscription — distinct from any Customer objects that might
+ * exist on their connected account for their own client-facing billing.
+ */
+export async function createBillingCustomer(email: string, organizationId: string): Promise<string> {
+  const stripe = getClient();
+  const customer = await stripe.customers.create({ email, metadata: { organizationId } });
+  return customer.id;
+}
+
+/**
+ * A Stripe Checkout session for the flat $29/month Jobscribe subscription.
+ * `subscription_data.metadata` carries the organizationId onto the created
+ * Subscription object itself, so the webhook handler can key off it without
+ * a second API round-trip.
+ */
+export async function createSubscriptionCheckoutSession(params: {
+  organizationId: string;
+  customerId: string;
+  successUrl: string;
+  cancelUrl: string;
+}): Promise<string> {
+  const stripe = getClient();
+  if (!env.stripeSubscriptionPriceId) {
+    throw new Error("STRIPE_SUBSCRIPTION_PRICE_ID is not configured");
+  }
+  const session = await stripe.checkout.sessions.create({
+    mode: "subscription",
+    customer: params.customerId,
+    line_items: [{ price: env.stripeSubscriptionPriceId, quantity: 1 }],
+    success_url: params.successUrl,
+    cancel_url: params.cancelUrl,
+    subscription_data: { metadata: { organizationId: params.organizationId } },
+  });
+  if (!session.url) throw new Error("Stripe did not return a Checkout URL");
+  return session.url;
+}
+
+/**
+ * A link into Stripe's hosted Billing Portal so the owner can update their
+ * card, view invoices, or cancel — without us building any of that UI.
+ * Requires the Customer Portal to be configured once in the Stripe Dashboard.
+ */
+export async function createBillingPortalLink(customerId: string, returnUrl: string): Promise<string> {
+  const stripe = getClient();
+  const session = await stripe.billingPortal.sessions.create({ customer: customerId, return_url: returnUrl });
+  return session.url;
+}
+
+export type MappedSubscriptionStatus = "TRIALING" | "ACTIVE" | "PAST_DUE" | "CANCELED" | "INCOMPLETE";
+
+/** Collapses Stripe's finer-grained subscription statuses onto our own enum. */
+export function mapStripeSubscriptionStatus(status: Stripe.Subscription.Status): MappedSubscriptionStatus {
+  switch (status) {
+    case "trialing":
+      return "TRIALING";
+    case "active":
+      return "ACTIVE";
+    case "past_due":
+      return "PAST_DUE";
+    case "canceled":
+    case "unpaid":
+      return "CANCELED";
+    default:
+      return "INCOMPLETE"; // incomplete, incomplete_expired, paused
+  }
+}
+
 export function verifyStripeWebhook(rawBody: Buffer, signature: string): Stripe.Event {
   const stripe = getClient();
   return stripe.webhooks.constructEvent(rawBody, signature, env.stripeWebhookSecret);

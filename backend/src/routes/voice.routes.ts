@@ -4,6 +4,7 @@ import path from "path";
 import fs from "fs";
 import { prisma } from "../db/prisma";
 import { requireAuth } from "../middleware/auth";
+import { requireActiveSubscription } from "../middleware/subscription";
 import { HttpError } from "../middleware/errorHandler";
 import { transcribeAudio } from "../services/transcription.service";
 import { extractJobDetails, extractQuoteDetails } from "../services/extraction.service";
@@ -40,7 +41,7 @@ const upload = multer({
  * 3. Claude extracts structured billing fields
  * 4. A draft invoice is created for the tech to review before sending
  */
-voiceRouter.post("/jobs/:jobId/voice-notes", requireAuth, upload.single("audio"), async (req, res) => {
+voiceRouter.post("/jobs/:jobId/voice-notes", requireAuth, requireActiveSubscription, upload.single("audio"), async (req, res) => {
   if (!req.file) {
     throw new HttpError(400, "Missing audio file field 'audio'");
   }
@@ -130,7 +131,7 @@ async function processVoiceNote(
   }
 }
 
-voiceRouter.get("/voice-notes/:id", requireAuth, async (req, res) => {
+voiceRouter.get("/voice-notes/:id", requireAuth, requireActiveSubscription, async (req, res) => {
   const voiceNote = await prisma.voiceNote.findFirst({
     where: { id: req.params.id, job: { organizationId: req.auth!.organizationId } },
     include: {

@@ -17,6 +17,7 @@ export default function Settings() {
   const [orgSaving, setOrgSaving] = useState(false);
 
   const [stripeLoading, setStripeLoading] = useState(false);
+  const [subscriptionLoading, setSubscriptionLoading] = useState(false);
 
   const [reviewRequestEnabled, setReviewRequestEnabled] = useState(true);
   const [reviewRequestDelayDays, setReviewRequestDelayDays] = useState("3");
@@ -60,6 +61,16 @@ export default function Settings() {
         );
       })
       .catch(() => toast.error("Could not confirm your Stripe account status."));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
+
+  // Landed back here after subscribing via Stripe Checkout — the webhook
+  // usually beats the redirect, but re-fetch to be sure rather than assume.
+  useEffect(() => {
+    if (searchParams.get("subscription") !== "return") return;
+    setSearchParams({}, { replace: true });
+    loadOrg();
+    toast.success("Subscription active — welcome to Jobscribe.");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
 
@@ -115,6 +126,28 @@ export default function Settings() {
     }
   };
 
+  const onSubscribe = async () => {
+    setSubscriptionLoading(true);
+    try {
+      const { data } = await api.post<{ url: string }>("/organizations/me/subscription/checkout");
+      window.location.href = data.url;
+    } catch (err: any) {
+      toast.error(err?.response?.data?.error ?? "Could not start checkout");
+      setSubscriptionLoading(false);
+    }
+  };
+
+  const onManageBilling = async () => {
+    setSubscriptionLoading(true);
+    try {
+      const { data } = await api.get<{ url: string }>("/organizations/me/subscription/portal");
+      window.location.href = data.url;
+    } catch (err: any) {
+      toast.error(err?.response?.data?.error ?? "Could not open the billing portal");
+      setSubscriptionLoading(false);
+    }
+  };
+
   const onChangePassword = async (e: FormEvent) => {
     e.preventDefault();
     setPasswordError(null);
@@ -136,6 +169,83 @@ export default function Settings() {
     <div>
       <h1>Settings</h1>
       <p className="page-subtitle">Business details and your account.</p>
+
+      <section className="panel">
+        <h2>Subscription</h2>
+        {!isOwner ? (
+          <p className="muted">Only the business owner can manage the subscription.</p>
+        ) : !org ? (
+          <p className="muted">Loading...</p>
+        ) : (
+          <div className="form-card">
+            {searchParams.get("subscription") === "required" && (
+              <div className="error-banner">Your trial has ended. Subscribe below to keep using Jobscribe.</div>
+            )}
+
+            {org.subscriptionStatus === "ACTIVE" && (
+              <>
+                <p className="consent-yes">
+                  <CheckCircleIcon width={16} height={16} /> Active — $29/month, flat rate.
+                </p>
+                {org.subscriptionCurrentPeriodEnd && (
+                  <p className="muted small">
+                    Renews {new Date(org.subscriptionCurrentPeriodEnd).toLocaleDateString()}.
+                  </p>
+                )}
+                <div className="button-row">
+                  <button type="button" className="btn-secondary" onClick={onManageBilling} disabled={subscriptionLoading}>
+                    {subscriptionLoading ? "Redirecting..." : "Manage billing"}
+                  </button>
+                </div>
+              </>
+            )}
+
+            {org.subscriptionStatus === "PAST_DUE" && (
+              <>
+                <p className="consent-no">
+                  <AlertCircleIcon width={16} height={16} /> Your last payment failed — update your card to avoid
+                  losing access.
+                </p>
+                <div className="button-row">
+                  <button type="button" onClick={onManageBilling} disabled={subscriptionLoading}>
+                    {subscriptionLoading ? "Redirecting..." : "Update payment method"}
+                  </button>
+                </div>
+              </>
+            )}
+
+            {org.subscriptionStatus === "TRIALING" && (
+              <>
+                <p className="muted">
+                  {org.trialEndsAt
+                    ? `Free trial — ${Math.max(0, Math.ceil((new Date(org.trialEndsAt).getTime() - Date.now()) / 86400000))} day(s) left.`
+                    : "Free trial active."}{" "}
+                  $29/month, flat rate, whenever you're ready.
+                </p>
+                <div className="button-row">
+                  <button type="button" onClick={onSubscribe} disabled={subscriptionLoading}>
+                    {subscriptionLoading ? "Redirecting..." : "Subscribe — $29/month"}
+                  </button>
+                </div>
+              </>
+            )}
+
+            {(org.subscriptionStatus === "CANCELED" || org.subscriptionStatus === "INCOMPLETE") && (
+              <>
+                <p className="consent-no">
+                  <AlertCircleIcon width={16} height={16} /> No active subscription — the rest of the app is locked
+                  until you subscribe.
+                </p>
+                <div className="button-row">
+                  <button type="button" onClick={onSubscribe} disabled={subscriptionLoading}>
+                    {subscriptionLoading ? "Redirecting..." : "Subscribe — $29/month"}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+      </section>
 
       <section className="panel">
         <h2>Business</h2>

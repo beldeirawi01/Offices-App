@@ -28,8 +28,12 @@ authRouter.post("/register", async (req, res) => {
 
   const passwordHash = await bcrypt.hash(body.password, 10);
 
+  const TRIAL_DAYS = 14;
   const organization = await prisma.organization.create({
-    data: { name: body.organizationName },
+    data: {
+      name: body.organizationName,
+      trialEndsAt: new Date(Date.now() + TRIAL_DAYS * 24 * 60 * 60 * 1000),
+    },
   });
 
   const user = await prisma.user.create({

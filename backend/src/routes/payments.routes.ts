@@ -1,9 +1,39 @@
 import { Router } from "express";
 import Stripe from "stripe";
 import { prisma } from "../db/prisma";
-import { verifyStripeWebhook, verifyStripeConnectWebhook } from "../services/payment.service";
+import { verifyStripeWebhook, verifyStripeConnectWebhook, mapStripeSubscriptionStatus } from "../services/payment.service";
 
 export const paymentsRouter = Router();
+
+/**
+ * Keeps an org's billing status in sync with its Stripe Subscription. Fires
+ * on creation and every status change (trial ending, a failed charge moving
+ * it to past_due, cancellation, etc). Guards against a stale/mismatched
+ * subscription id ever overwriting a newer one for the same org.
+ */
+async function handleSubscriptionStatusChange(subscription: Stripe.Subscription) {
+  const organizationId = subscription.metadata?.organizationId;
+  if (!organizationId) return;
+
+  const org = await prisma.organization.findUnique({ where: { id: organizationId } });
+  if (!org) return;
+  if (org.stripeSubscriptionId && org.stripeSubscriptionId !== subscription.id) {
+    console.error(`Stripe subscription id mismatch for org ${organizationId}: expected=${org.stripeSubscriptionId}, got=${subscription.id}`);
+    return;
+  }
+
+  await prisma.organization.update({
+    where: { id: organizationId },
+    data: {
+      stripeSubscriptionId: subscription.id,
+      stripeCustomerId: typeof subscription.customer === "string" ? subscription.customer : subscription.customer.id,
+      subscriptionStatus: mapStripeSubscriptionStatus(subscription.status),
+      subscriptionCurrentPeriodEnd: subscription.current_period_end
+        ? new Date(subscription.current_period_end * 1000)
+        : null,
+    },
+  });
+}
 
 /**
  * Shared by both webhook endpoints below. `event.account` is only present
@@ -13,6 +43,14 @@ export const paymentsRouter = Router();
  * guarantees the field but a mismatch here would mean a real bug elsewhere.
  */
 async function processStripeEvent(event: Stripe.Event) {
+  if (
+    event.type === "customer.subscription.created" ||
+    event.type === "customer.subscription.updated" ||
+    event.type === "customer.subscription.deleted"
+  ) {
+    return handleSubscriptionStatusChange(event.data.object as Stripe.Subscription);
+  }
+
   if (event.type !== "checkout.session.completed" && event.type !== "payment_intent.succeeded") {
     return;
   }

@@ -2,6 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../db/prisma";
 import { requireAuth } from "../middleware/auth";
+import { requireActiveSubscription } from "../middleware/subscription";
 import { HttpError } from "../middleware/errorHandler";
 import { env } from "../config/env";
 import { deliverQuoteToClient } from "../services/notification.service";
@@ -10,6 +11,7 @@ import { DraftLineItem } from "../services/invoice.service";
 
 export const quotesRouter = Router();
 quotesRouter.use(requireAuth);
+quotesRouter.use(requireActiveSubscription);
 
 const MAX_PAGE_SIZE = 100;
 function parsePagination(query: Record<string, unknown>) {

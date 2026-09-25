@@ -5,6 +5,7 @@ import fs from "fs";
 import { z } from "zod";
 import { prisma } from "../db/prisma";
 import { requireAuth, requireOwner } from "../middleware/auth";
+import { requireActiveSubscription } from "../middleware/subscription";
 import { HttpError } from "../middleware/errorHandler";
 import { transcribeAudio } from "../services/transcription.service";
 import {
@@ -46,6 +47,7 @@ const stageSchema = z.enum(["ARRIVAL", "MID_JOB", "COMPLETION"]);
 documentationRouter.post(
   "/jobs/:jobId/documentation",
   requireAuth,
+  requireActiveSubscription,
   upload.fields([
     { name: "photo", maxCount: 1 },
     { name: "audio", maxCount: 1 },
@@ -110,7 +112,7 @@ async function transcribeDocumentationAudio(documentationId: string, storageKey:
   }
 }
 
-documentationRouter.get("/jobs/:jobId/documentation", requireAuth, async (req, res) => {
+documentationRouter.get("/jobs/:jobId/documentation", requireAuth, requireActiveSubscription, async (req, res) => {
   const job = await prisma.job.findFirst({ where: { id: req.params.jobId, organizationId: req.auth!.organizationId } });
   if (!job) throw new HttpError(404, "Job not found");
 
@@ -124,7 +126,7 @@ documentationRouter.get("/jobs/:jobId/documentation", requireAuth, async (req, r
 // Streams (local disk) or redirects to a short-lived signed URL (S3) for the
 // photo — kept behind auth since this is liability evidence, not a
 // client-facing link like an invoice/quote's public token.
-documentationRouter.get("/documentation/:id/photo", requireAuth, async (req, res) => {
+documentationRouter.get("/documentation/:id/photo", requireAuth, requireActiveSubscription, async (req, res) => {
   const doc = await prisma.jobDocumentation.findFirst({
     where: { id: req.params.id, job: { organizationId: req.auth!.organizationId } },
   });
@@ -142,7 +144,7 @@ const updateSchema = z.object({ clientFacing: z.boolean() });
 // Owner-only: approving a photo to appear on the client-facing invoice is a
 // judgment call about what the client should see, not something a tech
 // records in the field.
-documentationRouter.put("/documentation/:id", requireAuth, requireOwner, async (req, res) => {
+documentationRouter.put("/documentation/:id", requireAuth, requireActiveSubscription, requireOwner, async (req, res) => {
   const body = updateSchema.parse(req.body);
   const existing = await prisma.jobDocumentation.findFirst({
     where: { id: req.params.id, job: { organizationId: req.auth!.organizationId } },

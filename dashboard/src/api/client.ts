@@ -20,6 +20,11 @@ api.interceptors.response.use(
       localStorage.removeItem("user");
       window.location.href = "/login";
     }
+    // Trial ended / subscription lapsed — still logged in, just needs to pay.
+    // Settings itself is never gated, so this can't loop.
+    if (error.response?.status === 402 && !window.location.pathname.startsWith("/settings")) {
+      window.location.href = "/settings?subscription=required";
+    }
     return Promise.reject(error);
   },
 );
@@ -135,6 +140,9 @@ export interface Organization {
   reviewRequestDelayDays: number;
   reviewLinkUrl: string | null;
   rebookingRemindersEnabled: boolean;
+  subscriptionStatus: "TRIALING" | "ACTIVE" | "PAST_DUE" | "CANCELED" | "INCOMPLETE";
+  trialEndsAt: string | null;
+  subscriptionCurrentPeriodEnd: string | null;
 }
 
 export interface Tech {

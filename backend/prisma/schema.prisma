@@ -53,6 +53,14 @@ enum DocumentationStage {
   COMPLETION
 }
 
+enum SubscriptionStatus {
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  CANCELED
+  INCOMPLETE
+}
+
 model Organization {
   id        String   @id @default(cuid())
   name      String
@@ -76,6 +84,19 @@ model Organization {
   reviewRequestDelayDays    Int     @default(3)
   reviewLinkUrl             String?
   rebookingRemindersEnabled Boolean @default(true)
+
+  // Platform billing — a flat $29/month subscription for using Jobscribe
+  // itself (separate from stripeAccountId above, which is the business's
+  // OWN connected account for receiving client payments). New orgs start on
+  // a 14-day trial (trialEndsAt set at registration); orgs that existed
+  // before this field was added get NULL, which is treated as "still
+  // allowed" (see requireActiveSubscription) rather than retroactively
+  // locking out anyone already using the app.
+  subscriptionStatus           SubscriptionStatus @default(TRIALING)
+  stripeCustomerId             String?
+  stripeSubscriptionId         String?
+  trialEndsAt                  DateTime?
+  subscriptionCurrentPeriodEnd DateTime?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

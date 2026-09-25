@@ -37,6 +37,11 @@ export const env = {
   // point at this same server.
   stripeConnectWebhookSecret: process.env.STRIPE_CONNECT_WEBHOOK_SECRET ?? "",
 
+  // The Price object (recurring, $29/month) for Jobscribe's own flat-rate
+  // subscription — created once in the Stripe Dashboard or CLI, not by this
+  // app, since it's a real billing decision, not something to fabricate.
+  stripeSubscriptionPriceId: process.env.STRIPE_SUBSCRIPTION_PRICE_ID ?? "",
+
   // Comma-separated list of origins allowed to call this API (dashboard, mobile
   // in dev). Falls back to permissive CORS only in development.
   allowedOrigins: (process.env.ALLOWED_ORIGINS ?? "")

@@ -40,6 +40,17 @@ This is a marketplace, not a single Stripe account taking everyone's money: each
   Testing locally with the Stripe CLI needs a second `stripe listen` process pointed at the connect route: `stripe listen --forward-to localhost:4000/api/payments/connect-webhook --events checkout.session.completed,payment_intent.succeeded` (it'll print its own `whsec_...` — that's your `STRIPE_CONNECT_WEBHOOK_SECRET`, different from the one for the platform-account listener).
 - **Your own Stripe account needs Connect turned on** (Stripe Dashboard → Connect → get started) before any of this works, even in test mode.
 
+## Subscription billing (flat $29/month)
+
+This is billing *your* business's users to use Jobscribe itself — a completely separate Stripe flow from Stripe Connect above (which is about *their* clients paying *them*). Flat-rate, single tier, no per-seat pricing.
+
+- **Trial**: every new organization starts with `subscriptionStatus: TRIALING` and a `trialEndsAt` 14 days out (set in `POST /api/auth/register`), so signup is self-serve with no payment info required up front.
+- **Gating** (`backend/src/middleware/subscription.ts`, `requireActiveSubscription`) blocks the core app (clients, jobs, invoices, quotes, reports, voice notes, job documentation) with `402 Payment Required` once the trial ends and there's no active/past-due subscription. `PAST_DUE` is still let through — Stripe retries a failed card for days before a subscription actually lapses. Settings, auth, and team management are never gated, so an owner can always log in and pay. An org with no `trialEndsAt` at all (anything created before this feature shipped) is grandfathered in rather than retroactively locked out.
+- **You have to create the $29/month Price yourself** — this app deliberately does not fabricate a price or auto-provision Stripe objects for something that's a real business decision. In the Stripe Dashboard (or CLI): Products → add a product → add a recurring price, $29.00/month. Put that Price's id in `STRIPE_SUBSCRIPTION_PRICE_ID`.
+- **Checkout** (`POST /api/organizations/me/subscription/checkout`) creates a platform-side Stripe Customer on first use and starts a Stripe Checkout session in subscription mode.
+- **Billing Portal** (`GET /api/organizations/me/subscription/portal`) lets the owner update their card, view invoices, or cancel — hosted by Stripe. You need to configure the Customer Portal once in the Stripe Dashboard (Settings → Billing → Customer portal) before this link will work.
+- **Webhooks** reuse the existing platform-account endpoint (`/api/payments/webhook`, `STRIPE_WEBHOOK_SECRET` from Stripe Connect above) — no new endpoint needed. Add these events to that same webhook in the Stripe Dashboard: `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`.
+
 ## Local setup
 
 ### 1. Backend
@@ -113,9 +124,10 @@ CI (`.github/workflows/backend-tests.yml`) runs this automatically against a fre
 - Multi-note job timeline — a job can collect several voice notes (an arrival quote, then one or more completion notes); every completion note's line items fold into the one draft invoice instead of only the first note winning (`invoice.service.ts#mergeExtractionIntoInvoice`), and the mobile job detail screen shows the full timeline
 - Automatic follow-up: a configurable-delay review request after an invoice is paid, and a rebooking reminder once a job's set recurrence interval (e.g. every 6 months for an HVAC tune-up) has passed — both are org-wide toggles in Settings with a per-client opt-out
 - Voice-and-photo job documentation — a photo + optional voice note pair captured at arrival/mid-job/completion, geotagged when location permission is granted, kept as standalone liability/warranty evidence separate from the invoice-facing job notes, with an owner-only toggle to feature a photo on the client invoice
+- Flat $29/month subscription billing — no per-seat pricing or tiers; a 14-day self-serve trial, then a single Stripe Checkout flow and hosted Billing Portal, with the whole app gated behind `402 Payment Required` once the trial or subscription lapses (see **Subscription billing** above)
 
 **Needs your action, not more code:**
-- **Accounts/credentials**: production OpenAI, Anthropic, Twilio, Brevo, Stripe (with **Connect enabled**, plus the second Connect-scoped webhook endpoint — see **Stripe Connect** above), and an S3-compatible bucket (AWS S3, Cloudflare R2, Backblaze B2) — this repo only has the integration code, not the accounts.
+- **Accounts/credentials**: production OpenAI, Anthropic, Twilio, Brevo, Stripe (with **Connect enabled**, plus the second Connect-scoped webhook endpoint, plus a real $29/month Price for subscription billing — see **Stripe Connect** and **Subscription billing** above), and an S3-compatible bucket (AWS S3, Cloudflare R2, Backblaze B2) — this repo only has the integration code, not the accounts.
 - **Legal review**: `dashboard/src/pages/Legal.tsx` has Terms of Service and Privacy Policy *drafts* — a lawyer needs to review and finalize these (jurisdiction, actual data practices, liability language) before they're relied upon.
 - **Twilio compliance**: complete A2P 10DLC/toll-free registration before sending SMS at volume; the app already gates SMS on a `smsConsent` flag per client, but the registration itself is done in your Twilio console.
 - **Deployment**: `render.yaml` (Render Blueprint) and `backend/Dockerfile` are ready to deploy from — you still need to connect your own Render/Railway account, and fill in the `sync: false` env vars in the dashboard after first deploy.

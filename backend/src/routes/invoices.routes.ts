@@ -2,6 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../db/prisma";
 import { requireAuth } from "../middleware/auth";
+import { requireActiveSubscription } from "../middleware/subscription";
 import { HttpError } from "../middleware/errorHandler";
 import { env } from "../config/env";
 import { createPaymentLinkForInvoice } from "../services/payment.service";
@@ -11,6 +12,7 @@ import { createInvoiceFromLineItems, DraftLineItem } from "../services/invoice.s
 
 export const invoicesRouter = Router();
 invoicesRouter.use(requireAuth);
+invoicesRouter.use(requireActiveSubscription);
 
 const MAX_PAGE_SIZE = 100;
 function parsePagination(query: Record<string, unknown>) {

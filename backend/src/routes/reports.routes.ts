@@ -1,9 +1,11 @@
 import { Router } from "express";
 import { prisma } from "../db/prisma";
 import { requireAuth } from "../middleware/auth";
+import { requireActiveSubscription } from "../middleware/subscription";
 
 export const reportsRouter = Router();
 reportsRouter.use(requireAuth);
+reportsRouter.use(requireActiveSubscription);
 
 // Owner dashboard summary: revenue, outstanding balances, job-type mix, busiest days.
 reportsRouter.get("/summary", async (req, res) => {
