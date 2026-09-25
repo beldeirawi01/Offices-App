@@ -12,13 +12,30 @@
     "ios": {
       "supportsTablet": true,
       "infoPlist": {
-        "NSMicrophoneUsageDescription": "We need microphone access so you can record a voice note describing the job you just finished."
+        "NSMicrophoneUsageDescription": "We need microphone access so you can record a voice note describing the job you just finished.",
+        "NSCameraUsageDescription": "We need camera access so you can photograph the job site for documentation.",
+        "NSPhotoLibraryUsageDescription": "We need photo library access so you can attach an existing photo to job documentation.",
+        "NSLocationWhenInUseUsageDescription": "We tag documentation photos with the job site's location as part of the evidence record."
       }
     },
     "android": {
-      "permissions": ["RECORD_AUDIO"],
+      "permissions": ["RECORD_AUDIO", "CAMERA", "ACCESS_FINE_LOCATION", "ACCESS_COARSE_LOCATION"],
       "package": "com.jobscribe.mobile"
     },
+    "plugins": [
+      [
+        "expo-image-picker",
+        {
+          "cameraPermission": "We need camera access so you can photograph the job site for documentation."
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "We tag documentation photos with the job site's location as part of the evidence record."
+        }
+      ]
+    ],
     "extra": {
       "apiBaseUrl": "http://localhost:4000/api"
     }

@@ -59,7 +59,7 @@ export default function JobListScreen({ navigation }: Props) {
           return (
             <TouchableOpacity
               style={styles.card}
-              onPress={() => navigation.navigate("Record", { jobId: item.id, jobTitle: item.title, purpose })}
+              onPress={() => navigation.navigate("JobDetail", { jobId: item.id })}
             >
               <Text style={styles.cardTitle}>{item.title}</Text>
               <Text style={styles.cardSub}>{item.client.name}</Text>
@@ -70,7 +70,7 @@ export default function JobListScreen({ navigation }: Props) {
                   {item.invoice && <Text style={styles.invoiceTag}>Invoice ready</Text>}
                 </View>
               </View>
-              <Text style={styles.actionHint}>{purpose === "QUOTE" ? "Tap to record a quote" : "Tap to record completion note"}</Text>
+              <Text style={styles.actionHint}>{purpose === "QUOTE" ? "Tap to record a quote" : "Tap to view timeline"}</Text>
             </TouchableOpacity>
           );
         }}

@@ -47,6 +47,12 @@ enum DeliveryChannel {
   EMAIL
 }
 
+enum DocumentationStage {
+  ARRIVAL
+  MID_JOB
+  COMPLETION
+}
+
 model Organization {
   id        String   @id @default(cuid())
   name      String
@@ -61,6 +67,15 @@ model Organization {
   stripeChargesEnabled   Boolean @default(false)
   stripePayoutsEnabled   Boolean @default(false)
   stripeDetailsSubmitted Boolean @default(false)
+
+  // Automatic follow-up: ask for a review some days after an invoice is
+  // paid, and nudge recurring-service clients to rebook when their job
+  // type's typical interval has passed. Both are org-wide defaults that a
+  // client's own `followUpsEnabled` can override to opt them out entirely.
+  reviewRequestEnabled      Boolean @default(true)
+  reviewRequestDelayDays    Int     @default(3)
+  reviewLinkUrl             String?
+  rebookingRemindersEnabled Boolean @default(true)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -103,6 +118,9 @@ model Client {
   state          String?
   postalCode     String?
   notes          String?
+  // Owner-controlled opt-out of automatic review requests and rebooking
+  // reminders for this specific client, without turning them off org-wide.
+  followUpsEnabled Boolean    @default(true)
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
 
@@ -130,12 +148,18 @@ model Job {
   city           String?
   state          String?
   postalCode     String?
+  // How often this type of job typically needs redoing (e.g. 6 for an HVAC
+  // tune-up), used to schedule a rebooking reminder that many months after
+  // completion. Null means "not a recurring job type" — no reminder is sent.
+  recurrenceIntervalMonths Int?
+  rebookingReminderSentAt  DateTime?
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
 
-  voiceNotes VoiceNote[]
-  invoice    Invoice?
-  quote      Quote?
+  voiceNotes    VoiceNote[]
+  invoice       Invoice?
+  quote         Quote?
+  documentation JobDocumentation[]
 
   @@index([organizationId])
   @@index([clientId])
@@ -158,6 +182,31 @@ model VoiceNote {
   purpose        String   @default("INVOICE")
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
+}
+
+// A photo + voice-note pair captured at a specific point in the job —
+// arrival, mid-job, or completion — kept separate from the general
+// VoiceNote/Job-note timeline as retrievable evidence for a liability
+// dispute or warranty claim, not as billing input.
+model JobDocumentation {
+  id              String             @id @default(cuid())
+  job             Job                @relation(fields: [jobId], references: [id])
+  jobId           String
+  stage           DocumentationStage
+  photoStorageKey String
+  audioStorageKey String?
+  transcript      String?
+  latitude        Float?
+  longitude       Float?
+  // Owner-approved to appear on the client-facing invoice (e.g. a before/after
+  // pair) — defaults to internal-only, since most captures are just evidence.
+  clientFacing    Boolean            @default(false)
+  status          String             @default("UPLOADED") // UPLOADED, TRANSCRIBING, TRANSCRIBED, FAILED — only meaningful when audioStorageKey is set
+  errorMessage    String?
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  @@index([jobId])
 }
 
 model Invoice {
@@ -184,6 +233,7 @@ model Invoice {
   sentAt         DateTime?
   paidAt         DateTime?
   lastReminderAt DateTime?
+  reviewRequestSentAt DateTime?
   stripePaymentLinkId String?
   stripePaymentLinkUrl String?
   createdAt      DateTime      @default(now())

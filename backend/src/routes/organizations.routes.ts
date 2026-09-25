@@ -24,6 +24,10 @@ const updateSchema = z.object({
   // Stored as a decimal fraction (0.0825 = 8.25%), but the dashboard sends/
   // shows it as a percentage — converted at the API boundary, not in the DB.
   taxRatePercent: z.number().min(0).max(100).optional(),
+  reviewRequestEnabled: z.boolean().optional(),
+  reviewRequestDelayDays: z.number().int().positive().optional(),
+  reviewLinkUrl: z.string().url().optional().nullable(),
+  rebookingRemindersEnabled: z.boolean().optional(),
 });
 
 organizationsRouter.put("/me", requireOwner, async (req, res) => {
@@ -33,6 +37,10 @@ organizationsRouter.put("/me", requireOwner, async (req, res) => {
     data: {
       name: body.name,
       taxRate: body.taxRatePercent != null ? body.taxRatePercent / 100 : undefined,
+      reviewRequestEnabled: body.reviewRequestEnabled,
+      reviewRequestDelayDays: body.reviewRequestDelayDays,
+      reviewLinkUrl: body.reviewLinkUrl,
+      rebookingRemindersEnabled: body.rebookingRemindersEnabled,
     },
   });
   res.json(org);

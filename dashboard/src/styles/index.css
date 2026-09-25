@@ -173,6 +173,41 @@ button:disabled {
   margin-top: 12px;
 }
 
+.transcript-entry + .transcript-entry {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+
+.documentation-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.documentation-card {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  padding: 12px;
+  background: var(--surface);
+}
+
+.documentation-photo {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+  background: var(--surface-sunken);
+  display: block;
+}
+
+.documentation-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 8px;
+}
+
 /* ---------- Form controls ---------- */
 
 input,
@@ -733,8 +768,10 @@ p.small {
   color: var(--steel);
 }
 
-.checkbox-row {
+.checkbox-row,
+.form-card > label.checkbox-row {
   display: flex;
+  flex-direction: row;
   align-items: center;
   gap: 8px;
   font-size: 13px;

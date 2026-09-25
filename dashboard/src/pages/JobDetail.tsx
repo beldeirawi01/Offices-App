@@ -1,10 +1,18 @@
 import { FormEvent, useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { api, Client, Job, Paginated, Tech } from "../api/client";
+import { api, Client, Job, JobDocumentation, Paginated, Tech } from "../api/client";
+import { useAuth } from "../context/AuthContext";
 import { useToast } from "../components/Toast";
 import { useConfirm } from "../components/ConfirmDialog";
 import Spinner from "../components/Spinner";
+import AuthedImage from "../components/AuthedImage";
 import { TrashIcon } from "../components/Icons";
+
+const STAGE_LABELS: Record<JobDocumentation["stage"], string> = {
+  ARRIVAL: "Arrival",
+  MID_JOB: "Mid-job",
+  COMPLETION: "Completion",
+};
 
 const STATUS_OPTIONS: Job["status"][] = ["SCHEDULED", "IN_PROGRESS", "COMPLETED", "CANCELLED"];
 
@@ -13,8 +21,11 @@ export default function JobDetail() {
   const navigate = useNavigate();
   const toast = useToast();
   const confirm = useConfirm();
+  const { user } = useAuth();
+  const isOwner = user?.role === "OWNER";
   const [job, setJob] = useState<Job | null>(null);
   const [techs, setTechs] = useState<Tech[]>([]);
+  const [docs, setDocs] = useState<JobDocumentation[]>([]);
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({
     title: "",
@@ -23,6 +34,7 @@ export default function JobDetail() {
     scheduledAt: "",
     assignedTechId: "",
     addressLine1: "",
+    recurrenceIntervalMonths: "",
   });
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -37,6 +49,7 @@ export default function JobDetail() {
         scheduledAt: res.data.scheduledAt ? res.data.scheduledAt.slice(0, 16) : "",
         assignedTechId: res.data.assignedTechId ?? "",
         addressLine1: res.data.addressLine1 ?? "",
+        recurrenceIntervalMonths: res.data.recurrenceIntervalMonths?.toString() ?? "",
       });
     });
   };
@@ -45,6 +58,14 @@ export default function JobDetail() {
   useEffect(() => {
     api.get<Tech[]>("/users").then((res) => setTechs(res.data));
   }, []);
+  useEffect(() => {
+    api.get<JobDocumentation[]>(`/jobs/${id}/documentation`).then((res) => setDocs(res.data));
+  }, [id]);
+
+  const onToggleClientFacing = async (docId: string, clientFacing: boolean) => {
+    const { data } = await api.put<JobDocumentation>(`/documentation/${docId}`, { clientFacing });
+    setDocs((prev) => prev.map((d) => (d.id === docId ? data : d)));
+  };
 
   const onSave = async (e: FormEvent) => {
     e.preventDefault();
@@ -57,6 +78,7 @@ export default function JobDetail() {
         scheduledAt: form.scheduledAt || undefined,
         assignedTechId: form.assignedTechId || undefined,
         addressLine1: form.addressLine1 || undefined,
+        recurrenceIntervalMonths: form.recurrenceIntervalMonths ? Number(form.recurrenceIntervalMonths) : null,
       });
       toast.success("Job updated.");
       setEditing(false);
@@ -149,6 +171,17 @@ export default function JobDetail() {
               Address
               <input value={form.addressLine1} onChange={(e) => setForm({ ...form, addressLine1: e.target.value })} />
             </label>
+            <label>
+              Rebook reminder (months)
+              <input
+                type="number"
+                min="1"
+                step="1"
+                placeholder="e.g. 6 for a recurring service"
+                value={form.recurrenceIntervalMonths}
+                onChange={(e) => setForm({ ...form, recurrenceIntervalMonths: e.target.value })}
+              />
+            </label>
           </div>
           <div className="form-actions">
             <button type="submit" disabled={saving}>
@@ -190,6 +223,15 @@ export default function JobDetail() {
             <div className="info-item">
               <span className="info-label">Address</span>
               <span className="info-value">{job.addressLine1}</span>
+            </div>
+          )}
+          {job.recurrenceIntervalMonths && (
+            <div className="info-item">
+              <span className="info-label">Rebook reminder</span>
+              <span className="info-value">
+                Every {job.recurrenceIntervalMonths} month{job.recurrenceIntervalMonths === 1 ? "" : "s"}
+                {job.rebookingReminderSentAt ? " — reminder sent" : ""}
+              </span>
             </div>
           )}
         </div>
@@ -249,8 +291,60 @@ export default function JobDetail() {
         )}
         {job.voiceNotes?.some((vn) => vn.transcript) && (
           <div className="panel nested-panel">
-            <h2>Transcript</h2>
-            <p className="muted">{job.voiceNotes.find((vn) => vn.transcript)?.transcript}</p>
+            <h2>Transcripts</h2>
+            {job.voiceNotes
+              .filter((vn) => vn.transcript)
+              .map((vn) => (
+                <div key={vn.id} className="transcript-entry">
+                  <p className="muted small">
+                    {vn.purpose === "QUOTE" ? "Quote" : "Invoice"} note — {new Date(vn.createdAt).toLocaleString()}
+                  </p>
+                  <p className="muted">{vn.transcript}</p>
+                </div>
+              ))}
+          </div>
+        )}
+      </section>
+
+      <section className="panel">
+        <h2>Documentation</h2>
+        <p className="muted small">
+          Photo and voice-note evidence captured on-site — kept separate from the job notes above for warranty and
+          dispute protection.
+        </p>
+        {docs.length === 0 ? (
+          <p className="muted">No documentation captured for this job yet.</p>
+        ) : (
+          <div className="documentation-grid">
+            {docs.map((doc) => (
+              <div key={doc.id} className="documentation-card">
+                <AuthedImage
+                  src={`/documentation/${doc.id}/photo`}
+                  alt={`${STAGE_LABELS[doc.stage]} photo`}
+                  className="documentation-photo"
+                />
+                <div className="documentation-meta">
+                  <span className="badge badge-scheduled">{STAGE_LABELS[doc.stage]}</span>
+                  <span className="muted small">{new Date(doc.createdAt).toLocaleString()}</span>
+                </div>
+                {doc.latitude != null && doc.longitude != null && (
+                  <p className="muted small">
+                    {doc.latitude.toFixed(5)}, {doc.longitude.toFixed(5)}
+                  </p>
+                )}
+                {doc.transcript && <p className="muted small">{doc.transcript}</p>}
+                {isOwner && (
+                  <label className="checkbox-row">
+                    <input
+                      type="checkbox"
+                      checked={doc.clientFacing}
+                      onChange={(e) => onToggleClientFacing(doc.id, e.target.checked)}
+                    />
+                    Show on client invoice
+                  </label>
+                )}
+              </div>
+            ))}
           </div>
         )}
       </section>

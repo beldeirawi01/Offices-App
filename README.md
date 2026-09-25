@@ -24,7 +24,7 @@ mobile/      Expo (React Native) tech-facing app — record a job note, review t
 
 ## Database
 
-PostgreSQL via Prisma (`backend/prisma/schema.prisma`): `Organization`, `User` (OWNER/TECH), `Client`, `Job`, `VoiceNote`, `Invoice`, `LineItem`, `Payment`, `InvoiceDelivery`. Migrations live in `backend/prisma/migrations/` and are committed — don't hand-edit the schema without regenerating a migration (`npm run prisma:migrate`).
+PostgreSQL via Prisma (`backend/prisma/schema.prisma`): `Organization`, `User` (OWNER/TECH), `Client`, `Job`, `VoiceNote`, `Invoice`, `LineItem`, `Payment`, `InvoiceDelivery`, `Quote`, `QuoteLineItem`, `QuoteDelivery`, `JobDocumentation`. Migrations live in `backend/prisma/migrations/` and are committed — don't hand-edit the schema without regenerating a migration (`npm run prisma:migrate`).
 
 ## Stripe Connect (multi-tenant payments)
 
@@ -109,6 +109,10 @@ CI (`.github/workflows/backend-tests.yml`) runs this automatically against a fre
 - "Start an unscheduled job" flow in the mobile app for walk-ins
 - Error tracking wiring (Sentry, optional via `SENTRY_DSN`)
 - A real backend test suite + CI
+- Voice-first quotes — an on-arrival estimate that the client accepts/declines, and auto-converts to an invoice when the job is marked complete (`backend/src/services/quote.service.ts`)
+- Multi-note job timeline — a job can collect several voice notes (an arrival quote, then one or more completion notes); every completion note's line items fold into the one draft invoice instead of only the first note winning (`invoice.service.ts#mergeExtractionIntoInvoice`), and the mobile job detail screen shows the full timeline
+- Automatic follow-up: a configurable-delay review request after an invoice is paid, and a rebooking reminder once a job's set recurrence interval (e.g. every 6 months for an HVAC tune-up) has passed — both are org-wide toggles in Settings with a per-client opt-out
+- Voice-and-photo job documentation — a photo + optional voice note pair captured at arrival/mid-job/completion, geotagged when location permission is granted, kept as standalone liability/warranty evidence separate from the invoice-facing job notes, with an owner-only toggle to feature a photo on the client invoice
 
 **Needs your action, not more code:**
 - **Accounts/credentials**: production OpenAI, Anthropic, Twilio, Brevo, Stripe (with **Connect enabled**, plus the second Connect-scoped webhook endpoint — see **Stripe Connect** above), and an S3-compatible bucket (AWS S3, Cloudflare R2, Backblaze B2) — this repo only has the integration code, not the accounts.

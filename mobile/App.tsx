@@ -8,6 +8,8 @@ import { colors } from "./src/theme";
 import LoginScreen from "./src/screens/LoginScreen";
 import JobListScreen from "./src/screens/JobListScreen";
 import NewJobScreen from "./src/screens/NewJobScreen";
+import JobDetailScreen from "./src/screens/JobDetailScreen";
+import DocumentationScreen from "./src/screens/DocumentationScreen";
 import RecordScreen from "./src/screens/RecordScreen";
 import QuoteReviewScreen from "./src/screens/QuoteReviewScreen";
 import InvoiceReviewScreen from "./src/screens/InvoiceReviewScreen";
@@ -40,6 +42,8 @@ function RootNavigator() {
     >
       <Stack.Screen name="JobList" component={JobListScreen} options={{ title: "Jobscribe" }} />
       <Stack.Screen name="NewJob" component={NewJobScreen} options={{ title: "New job" }} />
+      <Stack.Screen name="JobDetail" component={JobDetailScreen} options={{ title: "Job" }} />
+      <Stack.Screen name="Documentation" component={DocumentationScreen} options={{ title: "Document job" }} />
       <Stack.Screen
         name="Record"
         component={RecordScreen}

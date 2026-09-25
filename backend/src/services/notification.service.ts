@@ -208,3 +208,90 @@ export async function sendInvoiceReminder(params: {
 
   return results;
 }
+
+/**
+ * Asks a client for a review some days after their invoice was paid — the
+ * moment they're happiest with the work. Points at the org's own review
+ * link (e.g. Google Business Profile) rather than anything we host.
+ */
+export async function sendReviewRequest(params: {
+  clientEmail?: string | null;
+  clientPhone?: string | null;
+  clientSmsConsent: boolean;
+  reviewLinkUrl: string;
+  businessName: string;
+}): Promise<DeliveryResult[]> {
+  const results: DeliveryResult[] = [];
+
+  if (params.clientPhone && params.clientSmsConsent) {
+    try {
+      await sendSms({
+        to: params.clientPhone,
+        body: `Thanks for choosing ${params.businessName}! Mind leaving us a quick review? ${params.reviewLinkUrl}`,
+      });
+      results.push({ channel: "SMS", recipient: params.clientPhone, success: true });
+    } catch (err) {
+      results.push({ channel: "SMS", recipient: params.clientPhone, success: false, error: err instanceof Error ? err.message : "Unknown error" });
+    }
+  }
+
+  if (params.clientEmail) {
+    try {
+      await sendEmail({
+        to: params.clientEmail,
+        fromName: params.businessName,
+        subject: `How did we do?`,
+        text: `Thanks for choosing ${params.businessName}! Mind leaving us a quick review?\n\n${params.reviewLinkUrl}`,
+        html: `<p>Thanks for choosing <strong>${params.businessName}</strong>! Mind leaving us a quick review?</p><p><a href="${params.reviewLinkUrl}">Leave a review</a></p>`,
+      });
+      results.push({ channel: "EMAIL", recipient: params.clientEmail, success: true });
+    } catch (err) {
+      results.push({ channel: "EMAIL", recipient: params.clientEmail, success: false, error: err instanceof Error ? err.message : "Unknown error" });
+    }
+  }
+
+  return results;
+}
+
+/**
+ * Nudges a client to rebook once a recurring job type's typical interval
+ * (e.g. 6 months for an HVAC tune-up) has passed since it was last done.
+ */
+export async function sendRebookingReminder(params: {
+  clientEmail?: string | null;
+  clientPhone?: string | null;
+  clientSmsConsent: boolean;
+  jobTitle: string;
+  businessName: string;
+}): Promise<DeliveryResult[]> {
+  const results: DeliveryResult[] = [];
+
+  if (params.clientPhone && params.clientSmsConsent) {
+    try {
+      await sendSms({
+        to: params.clientPhone,
+        body: `Hi from ${params.businessName} — it's about time for your next "${params.jobTitle}" service. Ready to book?`,
+      });
+      results.push({ channel: "SMS", recipient: params.clientPhone, success: true });
+    } catch (err) {
+      results.push({ channel: "SMS", recipient: params.clientPhone, success: false, error: err instanceof Error ? err.message : "Unknown error" });
+    }
+  }
+
+  if (params.clientEmail) {
+    try {
+      await sendEmail({
+        to: params.clientEmail,
+        fromName: params.businessName,
+        subject: `Time for your next ${params.jobTitle}?`,
+        text: `Hi from ${params.businessName} — it's about time for your next "${params.jobTitle}" service. Ready to book?`,
+        html: `<p>Hi from <strong>${params.businessName}</strong> — it's about time for your next "${params.jobTitle}" service. Ready to book?</p>`,
+      });
+      results.push({ channel: "EMAIL", recipient: params.clientEmail, success: true });
+    } catch (err) {
+      results.push({ channel: "EMAIL", recipient: params.clientEmail, success: false, error: err instanceof Error ? err.message : "Unknown error" });
+    }
+  }
+
+  return results;
+}

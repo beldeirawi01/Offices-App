@@ -61,6 +61,7 @@ const clientSchema = z.object({
   state: z.string().optional().nullable(),
   postalCode: z.string().optional().nullable(),
   notes: z.string().optional().nullable(),
+  followUpsEnabled: z.boolean().optional(),
 });
 
 clientsRouter.post("/", async (req, res) => {

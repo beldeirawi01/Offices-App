@@ -67,6 +67,10 @@ const jobSchema = z.object({
   city: z.string().optional().nullable(),
   state: z.string().optional().nullable(),
   postalCode: z.string().optional().nullable(),
+  // Months until this job type typically needs redoing (e.g. 6 for an HVAC
+  // tune-up) — drives the automatic rebooking reminder. Null/omitted means
+  // this job isn't a recurring service.
+  recurrenceIntervalMonths: z.number().int().positive().optional().nullable(),
 });
 
 // Confirms clientId/assignedTechId (when provided) belong to the caller's own

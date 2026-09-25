@@ -18,6 +18,12 @@ export default function Settings() {
 
   const [stripeLoading, setStripeLoading] = useState(false);
 
+  const [reviewRequestEnabled, setReviewRequestEnabled] = useState(true);
+  const [reviewRequestDelayDays, setReviewRequestDelayDays] = useState("3");
+  const [reviewLinkUrl, setReviewLinkUrl] = useState("");
+  const [rebookingRemindersEnabled, setRebookingRemindersEnabled] = useState(true);
+  const [followUpsSaving, setFollowUpsSaving] = useState(false);
+
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [passwordSaving, setPasswordSaving] = useState(false);
@@ -29,6 +35,10 @@ export default function Settings() {
       setOrg(res.data);
       setName(res.data.name);
       setTaxRatePercent((res.data.taxRate * 100).toString());
+      setReviewRequestEnabled(res.data.reviewRequestEnabled);
+      setReviewRequestDelayDays(res.data.reviewRequestDelayDays.toString());
+      setReviewLinkUrl(res.data.reviewLinkUrl ?? "");
+      setRebookingRemindersEnabled(res.data.rebookingRemindersEnabled);
     });
   };
 
@@ -63,6 +73,25 @@ export default function Settings() {
       toast.error(err?.response?.data?.error ?? "Could not save changes");
     } finally {
       setOrgSaving(false);
+    }
+  };
+
+  const onSaveFollowUps = async (e: FormEvent) => {
+    e.preventDefault();
+    setFollowUpsSaving(true);
+    try {
+      const { data } = await api.put<Organization>("/organizations/me", {
+        reviewRequestEnabled,
+        reviewRequestDelayDays: Number(reviewRequestDelayDays),
+        reviewLinkUrl: reviewLinkUrl.trim() || null,
+        rebookingRemindersEnabled,
+      });
+      setOrg(data);
+      toast.success("Follow-up settings saved.");
+    } catch (err: any) {
+      toast.error(err?.response?.data?.error ?? "Could not save changes");
+    } finally {
+      setFollowUpsSaving(false);
     }
   };
 
@@ -184,6 +213,70 @@ export default function Settings() {
               </button>
             </div>
           </div>
+        )}
+      </section>
+
+      <section className="panel">
+        <h2>Follow-ups</h2>
+        {!isOwner ? (
+          <p className="muted">Only the business owner can change these settings.</p>
+        ) : !org ? (
+          <p className="muted">Loading...</p>
+        ) : (
+          <form className="form-card" onSubmit={onSaveFollowUps}>
+            <label className="checkbox-row">
+              <input
+                type="checkbox"
+                checked={reviewRequestEnabled}
+                onChange={(e) => setReviewRequestEnabled(e.target.checked)}
+              />
+              Ask clients for a review after they pay
+            </label>
+            <div className="form-grid">
+              <label>
+                Days after payment to ask
+                <input
+                  type="number"
+                  min="1"
+                  step="1"
+                  value={reviewRequestDelayDays}
+                  onChange={(e) => setReviewRequestDelayDays(e.target.value)}
+                  disabled={!reviewRequestEnabled}
+                />
+              </label>
+              <label>
+                Review link (e.g. Google Business Profile)
+                <input
+                  type="url"
+                  placeholder="https://g.page/r/..."
+                  value={reviewLinkUrl}
+                  onChange={(e) => setReviewLinkUrl(e.target.value)}
+                  disabled={!reviewRequestEnabled}
+                />
+              </label>
+            </div>
+            <p className="muted small">
+              No review requests are sent until a review link is set. Turn this off per-client from that client's page.
+            </p>
+
+            <label className="checkbox-row">
+              <input
+                type="checkbox"
+                checked={rebookingRemindersEnabled}
+                onChange={(e) => setRebookingRemindersEnabled(e.target.checked)}
+              />
+              Remind clients to rebook recurring services
+            </label>
+            <p className="muted small">
+              Set a recurrence interval on a job (e.g. every 6 months for an HVAC tune-up) to enable its reminder.
+            </p>
+
+            <div className="form-actions">
+              <button type="submit" disabled={followUpsSaving}>
+                {followUpsSaving ? "Saving..." : "Save"}
+              </button>
+            </div>
+          </form>
         )}
       </section>
 

@@ -16,7 +16,7 @@ export default function Jobs() {
   const [clients, setClients] = useState<Client[]>([]);
   const [techs, setTechs] = useState<Tech[]>([]);
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ clientId: "", title: "", jobType: "", scheduledAt: "", assignedTechId: "" });
+  const [form, setForm] = useState({ clientId: "", title: "", jobType: "", scheduledAt: "", assignedTechId: "", recurrenceIntervalMonths: "" });
   const [loading, setLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
 
@@ -45,8 +45,9 @@ export default function Jobs() {
       jobType: form.jobType || undefined,
       scheduledAt: form.scheduledAt || undefined,
       assignedTechId: form.assignedTechId || undefined,
+      recurrenceIntervalMonths: form.recurrenceIntervalMonths ? Number(form.recurrenceIntervalMonths) : undefined,
     });
-    setForm({ clientId: "", title: "", jobType: "", scheduledAt: "", assignedTechId: "" });
+    setForm({ clientId: "", title: "", jobType: "", scheduledAt: "", assignedTechId: "", recurrenceIntervalMonths: "" });
     setShowForm(false);
     toast.success("Job scheduled.");
     load(1);
@@ -121,6 +122,17 @@ export default function Jobs() {
                   </option>
                 ))}
               </select>
+            </label>
+            <label>
+              Rebook reminder (months)
+              <input
+                type="number"
+                min="1"
+                step="1"
+                placeholder="e.g. 6 for a recurring service"
+                value={form.recurrenceIntervalMonths}
+                onChange={(e) => setForm({ ...form, recurrenceIntervalMonths: e.target.value })}
+              />
             </label>
           </div>
           <div className="form-actions">

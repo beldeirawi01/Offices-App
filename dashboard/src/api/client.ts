@@ -42,6 +42,7 @@ export interface Client {
   state?: string | null;
   postalCode?: string | null;
   notes?: string | null;
+  followUpsEnabled?: boolean;
 }
 
 export interface Paginated<T> {
@@ -118,6 +119,8 @@ export interface Job {
   invoice?: Invoice | null;
   quote?: Quote | null;
   voiceNotes?: VoiceNote[];
+  recurrenceIntervalMonths?: number | null;
+  rebookingReminderSentAt?: string | null;
 }
 
 export interface Organization {
@@ -128,6 +131,10 @@ export interface Organization {
   stripeChargesEnabled: boolean;
   stripePayoutsEnabled: boolean;
   stripeDetailsSubmitted: boolean;
+  reviewRequestEnabled: boolean;
+  reviewRequestDelayDays: number;
+  reviewLinkUrl: string | null;
+  rebookingRemindersEnabled: boolean;
 }
 
 export interface Tech {
@@ -136,6 +143,18 @@ export interface Tech {
   email: string;
   role: "OWNER" | "TECH";
   phone?: string | null;
+}
+
+export interface JobDocumentation {
+  id: string;
+  stage: "ARRIVAL" | "MID_JOB" | "COMPLETION";
+  transcript?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  clientFacing: boolean;
+  status: string;
+  errorMessage?: string | null;
+  createdAt: string;
 }
 
 export interface ReportSummary {

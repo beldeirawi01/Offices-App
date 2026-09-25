@@ -15,7 +15,7 @@ export default function ClientDetail() {
   const confirm = useConfirm();
   const [client, setClient] = useState<ClientWithHistory | null>(null);
   const [editing, setEditing] = useState(false);
-  const [form, setForm] = useState({ name: "", email: "", phone: "", smsConsent: false, addressLine1: "" });
+  const [form, setForm] = useState({ name: "", email: "", phone: "", smsConsent: false, addressLine1: "", followUpsEnabled: true });
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
@@ -28,6 +28,7 @@ export default function ClientDetail() {
         phone: res.data.phone ?? "",
         smsConsent: res.data.smsConsent ?? false,
         addressLine1: res.data.addressLine1 ?? "",
+        followUpsEnabled: res.data.followUpsEnabled ?? true,
       });
     });
   };
@@ -44,6 +45,7 @@ export default function ClientDetail() {
         phone: form.phone || undefined,
         smsConsent: form.smsConsent,
         addressLine1: form.addressLine1 || undefined,
+        followUpsEnabled: form.followUpsEnabled,
       });
       toast.success("Client updated.");
       setEditing(false);
@@ -129,6 +131,14 @@ export default function ClientDetail() {
               Client has agreed to receive text messages at this number
             </label>
           )}
+          <label className="checkbox-row">
+            <input
+              type="checkbox"
+              checked={form.followUpsEnabled}
+              onChange={(e) => setForm({ ...form, followUpsEnabled: e.target.checked })}
+            />
+            Send this client automatic review requests and rebooking reminders
+          </label>
           <div className="form-actions">
             <button type="submit" disabled={saving}>
               {saving ? "Saving..." : "Save changes"}
@@ -157,6 +167,12 @@ export default function ClientDetail() {
               </span>
             </div>
           )}
+          <div className="info-item">
+            <span className="info-label">Follow-ups</span>
+            <span className={`info-value ${client.followUpsEnabled === false ? "consent-no" : "consent-yes"}`}>
+              {client.followUpsEnabled === false ? "Opted out" : "Enabled"}
+            </span>
+          </div>
         </div>
       )}
 

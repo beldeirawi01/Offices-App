@@ -52,6 +52,15 @@ export interface Quote {
   lineItems: LineItem[];
 }
 
+export interface JobVoiceNote {
+  id: string;
+  status: string;
+  purpose?: "QUOTE" | "INVOICE";
+  transcript?: string | null;
+  errorMessage?: string | null;
+  createdAt: string;
+}
+
 export interface Job {
   id: string;
   title: string;
@@ -61,6 +70,7 @@ export interface Job {
   client: Client;
   invoice?: Invoice | null;
   quote?: Quote | null;
+  voiceNotes?: JobVoiceNote[];
 }
 
 export interface VoiceNote {

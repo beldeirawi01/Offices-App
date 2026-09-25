@@ -68,8 +68,41 @@ export async function getVoiceNoteAudioLocalPath(storageKey: string): Promise<st
   return tempPath;
 }
 
+const localPhotoUploadDir = path.join(process.cwd(), "uploads", "job-photos");
+fs.mkdirSync(localPhotoUploadDir, { recursive: true });
+
+/**
+ * Persists a job-documentation photo — same S3-or-local-disk strategy as
+ * voice note audio, kept in a separate key prefix/directory.
+ */
+export async function storeJobPhoto(localTempPath: string, filename: string): Promise<StoredAudio> {
+  if (!isS3Configured) {
+    return { storageKey: localTempPath };
+  }
+
+  const key = `job-photos/${filename}`;
+  const body = fs.readFileSync(localTempPath);
+  await getS3Client().send(
+    new PutObjectCommand({ Bucket: env.s3Bucket, Key: key, Body: body, ContentType: "image/jpeg" }),
+  );
+  fs.unlink(localTempPath, () => {});
+  return { storageKey: key };
+}
+
+/**
+ * Returns a short-lived signed URL for viewing an S3-stored photo. For local
+ * storage the caller streams the file directly from disk instead (see
+ * documentation.routes.ts) since there's no separate object store to sign a
+ * URL against.
+ */
+export async function getJobPhotoSignedUrl(storageKey: string): Promise<string> {
+  return getSignedUrl(getS3Client(), new GetObjectCommand({ Bucket: env.s3Bucket, Key: storageKey }), {
+    expiresIn: 900,
+  });
+}
+
 export function isCloudStorageConfigured(): boolean {
   return isS3Configured;
 }
 
-export { localUploadDir };
+export { localUploadDir, localPhotoUploadDir };

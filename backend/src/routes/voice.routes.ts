@@ -7,7 +7,7 @@ import { requireAuth } from "../middleware/auth";
 import { HttpError } from "../middleware/errorHandler";
 import { transcribeAudio } from "../services/transcription.service";
 import { extractJobDetails, extractQuoteDetails } from "../services/extraction.service";
-import { createDraftInvoiceFromExtraction } from "../services/invoice.service";
+import { createDraftInvoiceFromExtraction, mergeExtractionIntoInvoice } from "../services/invoice.service";
 import { createDraftQuoteFromExtraction } from "../services/quote.service";
 import { storeVoiceNoteAudio, getVoiceNoteAudioLocalPath, isCloudStorageConfigured, localUploadDir } from "../services/storage.service";
 
@@ -109,6 +109,12 @@ async function processVoiceNote(
       const existingInvoice = await prisma.invoice.findUnique({ where: { jobId } });
       if (!existingInvoice) {
         await createDraftInvoiceFromExtraction({ organizationId, clientId, jobId, extracted });
+      } else {
+        // A job can get more than one completion note (e.g. the tech records
+        // progress throughout instead of just once at the end) — fold every
+        // note's line items into the one draft invoice rather than only the
+        // first note winning. No-ops if the invoice has already been sent.
+        await mergeExtractionIntoInvoice(existingInvoice.id, extracted);
       }
     }
   } catch (err) {
