@@ -205,7 +205,7 @@ export default function InvoiceDetail() {
               <button className="btn-secondary" onClick={onDownloadPdf}>
                 Download PDF
               </button>
-              {(invoice.status === "SENT" || invoice.status === "OVERDUE") && (
+              {(invoice.status === "DRAFT" || invoice.status === "SENT" || invoice.status === "OVERDUE") && (
                 <button className="btn-secondary" onClick={onMarkPaid} disabled={markingPaid}>
                   {markingPaid ? "Saving..." : "Mark as paid (cash/check)"}
                 </button>
