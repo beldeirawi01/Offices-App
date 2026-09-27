@@ -647,6 +647,21 @@ a:hover {
   border-bottom: none;
 }
 
+.bar-list li.voice-note-item-failed {
+  display: block;
+}
+
+.voice-note-row {
+  display: flex;
+  justify-content: space-between;
+}
+
+.voice-note-error {
+  margin: 6px 0 0;
+  color: var(--danger);
+  font-size: 13px;
+}
+
 .bar-value {
   font-family: var(--font-mono);
   font-weight: 600;

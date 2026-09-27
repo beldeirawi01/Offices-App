@@ -278,11 +278,16 @@ export default function JobDetail() {
         {job.voiceNotes && job.voiceNotes.length > 0 ? (
           <ul className="bar-list">
             {job.voiceNotes.map((vn) => (
-              <li key={vn.id}>
-                <span>
-                  {vn.purpose === "QUOTE" ? "Quote" : "Invoice"} note — {new Date(vn.createdAt).toLocaleString()}
-                </span>
-                <span className={`badge ${vn.status === "FAILED" ? "badge-overdue" : "badge-scheduled"}`}>{vn.status}</span>
+              <li key={vn.id} className={vn.status === "FAILED" ? "voice-note-item-failed" : undefined}>
+                <div className="voice-note-row">
+                  <span>
+                    {vn.purpose === "QUOTE" ? "Quote" : "Invoice"} note — {new Date(vn.createdAt).toLocaleString()}
+                  </span>
+                  <span className={`badge ${vn.status === "FAILED" ? "badge-overdue" : "badge-scheduled"}`}>{vn.status}</span>
+                </div>
+                {vn.status === "FAILED" && vn.errorMessage && (
+                  <p className="voice-note-error">{vn.errorMessage}</p>
+                )}
               </li>
             ))}
           </ul>
