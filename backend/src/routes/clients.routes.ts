@@ -3,7 +3,7 @@ import { z } from "zod";
 import { prisma } from "../db/prisma";
 import { requireAuth } from "../middleware/auth";
 import { requireActiveSubscription } from "../middleware/subscription";
-import { HttpError } from "../middleware/errorHandler";
+import { HttpError, isForeignKeyConstraintError } from "../middleware/errorHandler";
 
 export const clientsRouter = Router();
 clientsRouter.use(requireAuth);
@@ -91,6 +91,13 @@ clientsRouter.delete("/:id", async (req, res) => {
   });
   if (!existing) throw new HttpError(404, "Client not found");
 
-  await prisma.client.delete({ where: { id: req.params.id } });
+  try {
+    await prisma.client.delete({ where: { id: req.params.id } });
+  } catch (err) {
+    if (isForeignKeyConstraintError(err)) {
+      throw new HttpError(409, "Cannot delete this client — they still have jobs or invoices on file");
+    }
+    throw err;
+  }
   res.status(204).send();
 });

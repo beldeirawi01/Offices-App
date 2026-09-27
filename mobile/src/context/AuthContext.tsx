@@ -23,10 +23,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    AsyncStorage.getItem("user").then((raw) => {
-      if (raw) setUser(JSON.parse(raw));
-      setLoading(false);
-    });
+    AsyncStorage.getItem("user")
+      .then((raw) => {
+        if (raw) {
+          try {
+            setUser(JSON.parse(raw));
+          } catch {
+            // Corrupted/stale stored value (e.g. from an old app version) —
+            // fall back to logged-out rather than getting stuck here forever.
+            AsyncStorage.multiRemove(["token", "user"]).catch(() => {});
+          }
+        }
+      })
+      .catch(() => {
+        // AsyncStorage itself failed to read — treat as logged-out instead of
+        // leaving the whole app stuck on its startup spinner indefinitely.
+      })
+      .finally(() => setLoading(false));
   }, []);
 
   const login = async (email: string, password: string) => {

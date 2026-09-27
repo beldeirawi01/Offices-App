@@ -19,7 +19,13 @@ export default function QuoteDetail() {
   const [converting, setConverting] = useState(false);
 
   const load = () => {
-    api.get<QuoteDetailData>(`/quotes/${id}`).then((res) => setQuote(res.data));
+    api
+      .get<QuoteDetailData>(`/quotes/${id}`)
+      .then((res) => setQuote(res.data))
+      .catch((err) => {
+        toast.error(err?.response?.data?.error ?? "Could not load this quote");
+        navigate("/quotes");
+      });
   };
 
   useEffect(load, [id]);

@@ -3,7 +3,7 @@ import { z } from "zod";
 import { prisma } from "../db/prisma";
 import { requireAuth } from "../middleware/auth";
 import { requireActiveSubscription } from "../middleware/subscription";
-import { HttpError } from "../middleware/errorHandler";
+import { HttpError, isForeignKeyConstraintError } from "../middleware/errorHandler";
 import { convertQuoteToInvoice } from "../services/quote.service";
 
 export const jobsRouter = Router();
@@ -142,6 +142,13 @@ jobsRouter.delete("/:id", async (req, res) => {
   });
   if (!existing) throw new HttpError(404, "Job not found");
 
-  await prisma.job.delete({ where: { id: req.params.id } });
+  try {
+    await prisma.job.delete({ where: { id: req.params.id } });
+  } catch (err) {
+    if (isForeignKeyConstraintError(err)) {
+      throw new HttpError(409, "Cannot delete this job — it still has a quote, invoice, or recorded notes on file");
+    }
+    throw err;
+  }
   res.status(204).send();
 });

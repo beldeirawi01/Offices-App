@@ -28,8 +28,14 @@ export default function NewInvoice() {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    api.get<Paginated<Client>>("/clients", { params: { pageSize: 100 } }).then((res) => setClients(res.data.data));
-    api.get<Paginated<Job>>("/jobs", { params: { pageSize: 100 } }).then((res) => setJobs(res.data.data));
+    api
+      .get<Paginated<Client>>("/clients", { params: { pageSize: 100 } })
+      .then((res) => setClients(res.data.data))
+      .catch(() => setError("Could not load your clients. Try reloading the page."));
+    api
+      .get<Paginated<Job>>("/jobs", { params: { pageSize: 100 } })
+      .then((res) => setJobs(res.data.data))
+      .catch(() => setError("Could not load your jobs. Try reloading the page."));
   }, []);
 
   const jobsForClient = jobs.filter((j) => j.client.id === clientId && !j.invoice);

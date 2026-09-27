@@ -26,6 +26,7 @@ export default function Clients() {
         setClients(res.data.data);
         setPagination({ page: res.data.pagination.page, totalPages: res.data.pagination.totalPages });
       })
+      .catch((err) => toast.error(err?.response?.data?.error ?? "Could not load clients"))
       .finally(() => setLoading(false));
   };
 

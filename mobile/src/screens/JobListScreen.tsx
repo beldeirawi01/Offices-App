@@ -13,12 +13,16 @@ export default function JobListScreen({ navigation }: Props) {
   const { logout } = useAuth();
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
       const { data } = await api.get<Paginated<Job>>("/jobs", { params: { mine: "true", pageSize: 100 } });
       setJobs(data.data);
+      setLoadError(null);
+    } catch (err: any) {
+      setLoadError(err?.response?.data?.error ?? "Could not load your jobs. Pull down to try again.");
     } finally {
       setLoading(false);
     }
@@ -43,13 +47,15 @@ export default function JobListScreen({ navigation }: Props) {
         <Text style={styles.newJobButtonText}>+ New unscheduled job</Text>
       </TouchableOpacity>
 
+      {loadError && <Text style={styles.loadError}>{loadError}</Text>}
+
       <FlatList
         data={jobs}
         keyExtractor={(item) => item.id}
         refreshControl={<RefreshControl refreshing={loading} onRefresh={load} />}
         contentContainerStyle={{ paddingBottom: 24 }}
         ListEmptyComponent={
-          !loading ? <Text style={styles.empty}>No jobs assigned to you yet.</Text> : null
+          !loading && !loadError ? <Text style={styles.empty}>No jobs assigned to you yet.</Text> : null
         }
         renderItem={({ item }) => {
           // No quote yet: the tech is still on arrival, giving a price before
@@ -121,4 +127,5 @@ const styles = StyleSheet.create({
   quoteTag: { fontSize: 12, color: colors.denim, fontWeight: "700" },
   actionHint: { fontSize: 12, color: colors.steelLight, marginTop: spacing.sm },
   empty: { textAlign: "center", color: colors.steel, marginTop: 40 },
+  loadError: { textAlign: "center", color: colors.danger, marginBottom: spacing.md },
 });

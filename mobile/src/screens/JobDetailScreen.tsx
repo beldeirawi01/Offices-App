@@ -31,9 +31,11 @@ export default function JobDetailScreen({ route, navigation }: Props) {
   const [job, setJob] = useState<Job | null>(null);
   const [docs, setDocs] = useState<DocumentationEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(() => {
     setLoading(true);
+    setError(null);
     Promise.all([
       api.get<Job>(`/jobs/${jobId}`),
       api.get<DocumentationEntry[]>(`/jobs/${jobId}/documentation`),
@@ -42,6 +44,7 @@ export default function JobDetailScreen({ route, navigation }: Props) {
         setJob(jobRes.data);
         setDocs(docsRes.data);
       })
+      .catch((err) => setError(err?.response?.data?.error ?? "Could not load this job."))
       .finally(() => setLoading(false));
   }, [jobId]);
 
@@ -55,6 +58,18 @@ export default function JobDetailScreen({ route, navigation }: Props) {
     return (
       <View style={styles.center}>
         <ActivityIndicator size="large" color={colors.signal} />
+      </View>
+    );
+  }
+  if (error && !job) {
+    return (
+      <View style={styles.center}>
+        <Text style={[styles.noteError, { textAlign: "center", paddingHorizontal: spacing.xl, marginBottom: spacing.lg }]}>
+          {error}
+        </Text>
+        <TouchableOpacity style={styles.recordButton} onPress={load}>
+          <Text style={styles.recordButtonText}>Try again</Text>
+        </TouchableOpacity>
       </View>
     );
   }

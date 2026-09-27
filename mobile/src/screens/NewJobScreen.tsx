@@ -43,6 +43,7 @@ export default function NewJobScreen({ navigation }: Props) {
       api
         .get<Paginated<Client>>("/clients", { params: { search, pageSize: 10 } })
         .then((res) => setResults(res.data.data))
+        .catch((err) => console.error("Client search failed", err))
         .finally(() => setSearching(false));
     }, 300);
     return () => clearTimeout(timeout);

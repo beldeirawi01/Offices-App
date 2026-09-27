@@ -40,26 +40,38 @@ export default function JobDetail() {
   const [deleting, setDeleting] = useState(false);
 
   const load = () => {
-    api.get<Job>(`/jobs/${id}`).then((res) => {
-      setJob(res.data);
-      setForm({
-        title: res.data.title,
-        jobType: res.data.jobType ?? "",
-        status: res.data.status,
-        scheduledAt: res.data.scheduledAt ? res.data.scheduledAt.slice(0, 16) : "",
-        assignedTechId: res.data.assignedTechId ?? "",
-        addressLine1: res.data.addressLine1 ?? "",
-        recurrenceIntervalMonths: res.data.recurrenceIntervalMonths?.toString() ?? "",
+    api
+      .get<Job>(`/jobs/${id}`)
+      .then((res) => {
+        setJob(res.data);
+        setForm({
+          title: res.data.title,
+          jobType: res.data.jobType ?? "",
+          status: res.data.status,
+          scheduledAt: res.data.scheduledAt ? res.data.scheduledAt.slice(0, 16) : "",
+          assignedTechId: res.data.assignedTechId ?? "",
+          addressLine1: res.data.addressLine1 ?? "",
+          recurrenceIntervalMonths: res.data.recurrenceIntervalMonths?.toString() ?? "",
+        });
+      })
+      .catch((err) => {
+        toast.error(err?.response?.data?.error ?? "Could not load this job");
+        navigate("/jobs");
       });
-    });
   };
 
   useEffect(load, [id]);
   useEffect(() => {
-    api.get<Tech[]>("/users").then((res) => setTechs(res.data));
+    api
+      .get<Tech[]>("/users")
+      .then((res) => setTechs(res.data))
+      .catch(() => toast.error("Could not load the team list"));
   }, []);
   useEffect(() => {
-    api.get<JobDocumentation[]>(`/jobs/${id}/documentation`).then((res) => setDocs(res.data));
+    api
+      .get<JobDocumentation[]>(`/jobs/${id}/documentation`)
+      .then((res) => setDocs(res.data))
+      .catch(() => toast.error("Could not load job documentation"));
   }, [id]);
 
   const onToggleClientFacing = async (docId: string, clientFacing: boolean) => {

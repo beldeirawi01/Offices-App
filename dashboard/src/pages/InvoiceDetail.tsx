@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { api, Invoice, Organization } from "../api/client";
 import { useToast } from "../components/Toast";
 import { useConfirm } from "../components/ConfirmDialog";
@@ -13,6 +13,7 @@ const APP_BASE_URL = (import.meta.env.VITE_APP_BASE_URL as string | undefined) ?
 
 export default function InvoiceDetail() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const toast = useToast();
   const confirm = useConfirm();
   const [invoice, setInvoice] = useState<InvoiceDetailData | null>(null);
@@ -22,12 +23,21 @@ export default function InvoiceDetail() {
   const [markingPaid, setMarkingPaid] = useState(false);
 
   const load = () => {
-    api.get<InvoiceDetailData>(`/invoices/${id}`).then((res) => setInvoice(res.data));
+    api
+      .get<InvoiceDetailData>(`/invoices/${id}`)
+      .then((res) => setInvoice(res.data))
+      .catch((err) => {
+        toast.error(err?.response?.data?.error ?? "Could not load this invoice");
+        navigate("/invoices");
+      });
   };
 
   useEffect(load, [id]);
   useEffect(() => {
-    api.get<Organization>("/organizations/me").then((res) => setOrg(res.data));
+    api
+      .get<Organization>("/organizations/me")
+      .then((res) => setOrg(res.data))
+      .catch(() => toast.error("Could not load business settings"));
   }, []);
 
   const onSend = async () => {

@@ -20,17 +20,23 @@ export default function ClientDetail() {
   const [deleting, setDeleting] = useState(false);
 
   const load = () => {
-    api.get<ClientWithHistory>(`/clients/${id}`).then((res) => {
-      setClient(res.data);
-      setForm({
-        name: res.data.name,
-        email: res.data.email ?? "",
-        phone: res.data.phone ?? "",
-        smsConsent: res.data.smsConsent ?? false,
-        addressLine1: res.data.addressLine1 ?? "",
-        followUpsEnabled: res.data.followUpsEnabled ?? true,
+    api
+      .get<ClientWithHistory>(`/clients/${id}`)
+      .then((res) => {
+        setClient(res.data);
+        setForm({
+          name: res.data.name,
+          email: res.data.email ?? "",
+          phone: res.data.phone ?? "",
+          smsConsent: res.data.smsConsent ?? false,
+          addressLine1: res.data.addressLine1 ?? "",
+          followUpsEnabled: res.data.followUpsEnabled ?? true,
+        });
+      })
+      .catch((err) => {
+        toast.error(err?.response?.data?.error ?? "Could not load this client");
+        navigate("/clients");
       });
-    });
   };
 
   useEffect(load, [id]);

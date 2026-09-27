@@ -12,6 +12,7 @@ export default function Dashboard() {
     api
       .get<ReportSummary>("/reports/summary")
       .then((res) => setSummary(res.data))
+      .catch((err) => console.error("Could not load report summary", err))
       .finally(() => setLoading(false));
   }, []);
 

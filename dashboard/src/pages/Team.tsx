@@ -25,6 +25,7 @@ export default function Team() {
     api
       .get<Tech[]>("/users")
       .then((res) => setTechs(res.data))
+      .catch((err) => toast.error(err?.response?.data?.error ?? "Could not load the team"))
       .finally(() => setLoading(false));
   };
 

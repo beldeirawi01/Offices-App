@@ -5,8 +5,10 @@ import Pagination from "../components/Pagination";
 import EmptyState from "../components/EmptyState";
 import Spinner from "../components/Spinner";
 import { PlusIcon } from "../components/Icons";
+import { useToast } from "../components/Toast";
 
 export default function Quotes() {
+  const toast = useToast();
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [pagination, setPagination] = useState({ page: 1, totalPages: 1 });
   const [statusFilter, setStatusFilter] = useState("");
@@ -21,6 +23,7 @@ export default function Quotes() {
         setQuotes(res.data.data);
         setPagination({ page: res.data.pagination.page, totalPages: res.data.pagination.totalPages });
       })
+      .catch((err) => toast.error(err?.response?.data?.error ?? "Could not load quotes"))
       .finally(() => setLoading(false));
   };
 

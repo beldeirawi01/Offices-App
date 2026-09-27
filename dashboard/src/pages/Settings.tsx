@@ -32,15 +32,18 @@ export default function Settings() {
   const [passwordSuccess, setPasswordSuccess] = useState(false);
 
   const loadOrg = () => {
-    api.get<Organization>("/organizations/me").then((res) => {
-      setOrg(res.data);
-      setName(res.data.name);
-      setTaxRatePercent((res.data.taxRate * 100).toString());
-      setReviewRequestEnabled(res.data.reviewRequestEnabled);
-      setReviewRequestDelayDays(res.data.reviewRequestDelayDays.toString());
-      setReviewLinkUrl(res.data.reviewLinkUrl ?? "");
-      setRebookingRemindersEnabled(res.data.rebookingRemindersEnabled);
-    });
+    api
+      .get<Organization>("/organizations/me")
+      .then((res) => {
+        setOrg(res.data);
+        setName(res.data.name);
+        setTaxRatePercent((res.data.taxRate * 100).toString());
+        setReviewRequestEnabled(res.data.reviewRequestEnabled);
+        setReviewRequestDelayDays(res.data.reviewRequestDelayDays.toString());
+        setReviewLinkUrl(res.data.reviewLinkUrl ?? "");
+        setRebookingRemindersEnabled(res.data.rebookingRemindersEnabled);
+      })
+      .catch((err) => toast.error(err?.response?.data?.error ?? "Could not load business settings"));
   };
 
   useEffect(loadOrg, []);

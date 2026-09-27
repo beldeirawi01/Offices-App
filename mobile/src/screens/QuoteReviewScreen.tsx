@@ -22,16 +22,23 @@ export default function QuoteReviewScreen({ route, navigation }: Props) {
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
   const [sent, setSent] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
-  useEffect(() => {
-    api.get<VoiceNote>(`/voice-notes/${voiceNoteId}`).then((res) => {
-      setVoiceNote(res.data);
-      if (res.data.job.quote) {
-        setLineItems(res.data.job.quote.lineItems);
-        setNotes(res.data.job.quote.notes ?? "");
-      }
-    });
-  }, [voiceNoteId]);
+  const loadVoiceNote = () => {
+    setLoadError(null);
+    api
+      .get<VoiceNote>(`/voice-notes/${voiceNoteId}`)
+      .then((res) => {
+        setVoiceNote(res.data);
+        if (res.data.job.quote) {
+          setLineItems(res.data.job.quote.lineItems);
+          setNotes(res.data.job.quote.notes ?? "");
+        }
+      })
+      .catch((err) => setLoadError(err?.response?.data?.error ?? "Could not load this quote."));
+  };
+
+  useEffect(loadVoiceNote, [voiceNoteId]);
 
   const updateLineItem = (id: string, field: "description" | "quantity" | "unitPrice", value: string) => {
     setLineItems((items) =>
@@ -76,6 +83,21 @@ export default function QuoteReviewScreen({ route, navigation }: Props) {
       setSaving(false);
     }
   };
+
+  if (loadError && !voiceNote) {
+    return (
+      <View style={styles.centered}>
+        <Text style={styles.doneTitle}>Could not load this quote</Text>
+        <Text style={styles.doneSub}>{loadError}</Text>
+        <TouchableOpacity style={styles.primaryButton} onPress={loadVoiceNote}>
+          <Text style={styles.primaryButtonText}>Try again</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.secondaryButton} onPress={() => navigation.popToTop()}>
+          <Text style={styles.secondaryButtonText}>Back to jobs</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   if (!voiceNote) {
     return (
@@ -207,6 +229,8 @@ const styles = StyleSheet.create({
   totalValue: { fontSize: 18, fontWeight: "700", color: colors.ink },
   primaryButton: { backgroundColor: colors.signal, borderRadius: radius.sm, padding: spacing.lg, alignItems: "center" },
   primaryButtonText: { color: colors.white, fontWeight: "700", fontSize: 16 },
+  secondaryButton: { marginTop: spacing.md, padding: spacing.md, alignItems: "center" },
+  secondaryButtonText: { color: colors.denim, fontWeight: "600", fontSize: 15 },
   doneTitle: { fontSize: 22, fontWeight: "800", marginBottom: spacing.sm, color: colors.ink },
   doneSub: { color: colors.steel, marginBottom: spacing.xl, textAlign: "center" },
 });

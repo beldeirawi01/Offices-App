@@ -28,13 +28,20 @@ export default function Jobs() {
         setJobs(res.data.data);
         setPagination({ page: res.data.pagination.page, totalPages: res.data.pagination.totalPages });
       })
+      .catch((err) => toast.error(err?.response?.data?.error ?? "Could not load jobs"))
       .finally(() => setLoading(false));
   };
 
   useEffect(() => {
     load(1);
-    api.get<Paginated<Client>>("/clients", { params: { pageSize: 100 } }).then((res) => setClients(res.data.data));
-    api.get<Tech[]>("/users").then((res) => setTechs(res.data));
+    api
+      .get<Paginated<Client>>("/clients", { params: { pageSize: 100 } })
+      .then((res) => setClients(res.data.data))
+      .catch(() => toast.error("Could not load clients"));
+    api
+      .get<Tech[]>("/users")
+      .then((res) => setTechs(res.data))
+      .catch(() => toast.error("Could not load the team list"));
   }, []);
 
   const onCreate = async (e: FormEvent) => {
