@@ -5,6 +5,40 @@ import { sendInvoiceReminder, sendRebookingReminder, sendReviewRequest } from ".
 
 const REMINDER_INTERVAL_DAYS = 3;
 
+// Arbitrary distinct keys for Postgres advisory locks, one per send-type
+// scheduled job. Only jobs that actually send something to a client need
+// one — markOverdueInvoices is a plain idempotent status flip, safe for two
+// instances to run concurrently with no duplicate side effect.
+const LOCK_KEYS = {
+  sendOverdueReminders: 7201,
+  sendReviewRequests: 7202,
+  sendRebookingReminders: 7203,
+} as const;
+
+/**
+ * Runs `fn` only if this process can claim `lockKey` for the duration —
+ * guards against two backend instances (or an overlapping run that took
+ * longer than the cron interval) both sending the same reminder/review
+ * request. pg_try_advisory_xact_lock is non-blocking (a losing instance
+ * skips this run rather than queuing behind the winner) and automatically
+ * released when the transaction ends, so a crashed process can't leak a
+ * held lock. Prisma's default 5s transaction timeout is raised since `fn`
+ * makes real outbound calls (SMS/email) per candidate, sequentially.
+ */
+async function withAdvisoryLock(lockKey: number, jobName: string, fn: () => Promise<void>): Promise<void> {
+  await prisma.$transaction(
+    async (tx) => {
+      const rows = await tx.$queryRaw<{ locked: boolean }[]>`SELECT pg_try_advisory_xact_lock(${lockKey}) AS locked`;
+      if (!rows[0]?.locked) {
+        console.log(`[scheduler] ${jobName}: another instance already holds this job's lock, skipping this run`);
+        return;
+      }
+      await fn();
+    },
+    { timeout: 5 * 60 * 1000 },
+  );
+}
+
 /**
  * Flips SENT invoices past their due date to OVERDUE. Runs hourly so the
  * dashboard's "outstanding" numbers and the tech's job list reflect reality
@@ -24,7 +58,7 @@ async function markOverdueInvoices() {
  * the last REMINDER_INTERVAL_DAYS, so clients get nudged automatically
  * instead of the owner having to chase payments by hand.
  */
-async function sendOverdueReminders() {
+async function sendOverdueRemindersImpl() {
   const now = new Date();
   const cutoff = new Date(now.getTime() - REMINDER_INTERVAL_DAYS * 24 * 60 * 60 * 1000);
 
@@ -69,7 +103,7 @@ async function sendOverdueReminders() {
  * elapsed since payment. Requires the org to have set a review link — with
  * none configured there's nowhere to send the client, so it's skipped.
  */
-async function sendReviewRequests() {
+async function sendReviewRequestsImpl() {
   const now = new Date();
 
   const candidates = await prisma.invoice.findMany({
@@ -113,7 +147,7 @@ async function sendReviewRequests() {
  * for an HVAC tune-up), so candidates are filtered in application code
  * rather than a single SQL cutoff.
  */
-async function sendRebookingReminders() {
+async function sendRebookingRemindersImpl() {
   const now = new Date();
 
   const candidates = await prisma.job.findMany({
@@ -153,6 +187,19 @@ async function sendRebookingReminders() {
   if (sent > 0) console.log(`[scheduler] Sent ${sent} rebooking reminder(s)`);
 }
 
+// Lock-guarded entry points — these are what the cron schedule (and the test
+// suite/manual triggering) actually calls, so double-sending is prevented no
+// matter who calls them.
+async function sendOverdueReminders() {
+  await withAdvisoryLock(LOCK_KEYS.sendOverdueReminders, "sendOverdueReminders", sendOverdueRemindersImpl);
+}
+async function sendReviewRequests() {
+  await withAdvisoryLock(LOCK_KEYS.sendReviewRequests, "sendReviewRequests", sendReviewRequestsImpl);
+}
+async function sendRebookingReminders() {
+  await withAdvisoryLock(LOCK_KEYS.sendRebookingReminders, "sendRebookingReminders", sendRebookingRemindersImpl);
+}
+
 /**
  * Starts the background jobs. Skipped automatically if Twilio/Brevo
  * aren't configured for reminders — overdue marking still runs regardless,
@@ -183,4 +230,4 @@ export function startScheduledJobs() {
 }
 
 // Exported for the test suite and for manual/CLI triggering.
-export { markOverdueInvoices, sendOverdueReminders, sendReviewRequests, sendRebookingReminders };
+export { markOverdueInvoices, sendOverdueReminders, sendReviewRequests, sendRebookingReminders, LOCK_KEYS };
