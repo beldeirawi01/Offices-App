@@ -15,7 +15,12 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
+    // /auth/login and /auth/register legitimately return 401/400 for bad
+    // credentials — that's not a dead session, it's the login form's own job
+    // to show inline, so a hard reload here would blow away that error
+    // before React ever got to render it.
+    const isAuthAttempt = /\/auth\/(login|register)$/.test(error.config?.url ?? "");
+    if (error.response?.status === 401 && !isAuthAttempt) {
       localStorage.removeItem("token");
       localStorage.removeItem("user");
       window.location.href = "/login";
