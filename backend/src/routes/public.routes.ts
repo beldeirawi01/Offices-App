@@ -11,6 +11,15 @@ export const publicRouter = Router();
 const publicLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 60, standardHeaders: true, legacyHeaders: false });
 publicRouter.use(publicLimiter);
 
+// A quote is a time-sensitive proposal — pricing quoted 4 months ago
+// shouldn't be bindable today. Viewing/PDF access never expires (clients
+// reasonably want the record later), only the accept/decline action does.
+const QUOTE_ACCEPT_EXPIRY_DAYS = 90;
+function isQuoteLinkExpired(sentAt: Date | null): boolean {
+  if (!sentAt) return false;
+  return Date.now() - sentAt.getTime() > QUOTE_ACCEPT_EXPIRY_DAYS * 24 * 60 * 60 * 1000;
+}
+
 // Client-facing invoice view — the link sent by SMS/email. Deliberately
 // returns only what a client needs to see, never internal ids or other data.
 publicRouter.get("/invoices/:token", async (req, res) => {
@@ -75,6 +84,9 @@ publicRouter.post("/quotes/:token/accept", async (req, res) => {
   if (quote.status !== "SENT") {
     throw new HttpError(400, `This quote can no longer be responded to (currently ${quote.status.toLowerCase()})`);
   }
+  if (isQuoteLinkExpired(quote.sentAt)) {
+    throw new HttpError(410, "This quote has expired. Please contact the business for updated pricing.");
+  }
   const updated = await prisma.quote.update({
     where: { id: quote.id },
     data: { status: "ACCEPTED", respondedAt: new Date() },
@@ -87,6 +99,9 @@ publicRouter.post("/quotes/:token/decline", async (req, res) => {
   if (!quote) throw new HttpError(404, "Quote not found");
   if (quote.status !== "SENT") {
     throw new HttpError(400, `This quote can no longer be responded to (currently ${quote.status.toLowerCase()})`);
+  }
+  if (isQuoteLinkExpired(quote.sentAt)) {
+    throw new HttpError(410, "This quote has expired. Please contact the business for updated pricing.");
   }
   const updated = await prisma.quote.update({
     where: { id: quote.id },

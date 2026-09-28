@@ -245,8 +245,9 @@ model Invoice {
   invoiceNumber  String        @unique
   // Unguessable token used to build the client-facing invoice/payment link,
   // so clients can view and pay without an account and without exposing the
-  // sequential/internal invoice id.
-  publicToken    String        @unique @default(cuid())
+  // sequential/internal invoice id. A UUID (not cuid) deliberately — cuid
+  // embeds a timestamp and is optimized for sortability, not unguessability.
+  publicToken    String        @unique @default(uuid())
   status         InvoiceStatus @default(DRAFT)
   laborHours     Float?
   laborRate      Float?
@@ -297,7 +298,7 @@ model Quote {
   quoteNumber    String       @unique
   // Unguessable token for the client-facing quote page (view + accept/decline),
   // same pattern as Invoice.publicToken.
-  publicToken    String       @unique @default(cuid())
+  publicToken    String       @unique @default(uuid())
   status         QuoteStatus  @default(DRAFT)
   laborHours     Float?
   laborRate      Float?
