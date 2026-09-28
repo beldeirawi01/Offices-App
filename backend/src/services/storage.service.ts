@@ -31,7 +31,7 @@ export interface StoredAudio {
  * configured (required for production — most hosts have ephemeral disks);
  * falls back to local disk for zero-config local development.
  */
-export async function storeVoiceNoteAudio(localTempPath: string, filename: string): Promise<StoredAudio> {
+export async function storeVoiceNoteAudio(localTempPath: string, filename: string, contentType = "audio/m4a"): Promise<StoredAudio> {
   if (!isS3Configured) {
     return { storageKey: localTempPath };
   }
@@ -39,7 +39,7 @@ export async function storeVoiceNoteAudio(localTempPath: string, filename: strin
   const key = `voice-notes/${filename}`;
   const body = fs.readFileSync(localTempPath);
   await getS3Client().send(
-    new PutObjectCommand({ Bucket: env.s3Bucket, Key: key, Body: body, ContentType: "audio/m4a" }),
+    new PutObjectCommand({ Bucket: env.s3Bucket, Key: key, Body: body, ContentType: contentType }),
   );
   // Local temp file (from multer's disk storage) is no longer needed once uploaded.
   fs.unlink(localTempPath, () => {});
@@ -75,7 +75,7 @@ fs.mkdirSync(localPhotoUploadDir, { recursive: true });
  * Persists a job-documentation photo — same S3-or-local-disk strategy as
  * voice note audio, kept in a separate key prefix/directory.
  */
-export async function storeJobPhoto(localTempPath: string, filename: string): Promise<StoredAudio> {
+export async function storeJobPhoto(localTempPath: string, filename: string, contentType = "image/jpeg"): Promise<StoredAudio> {
   if (!isS3Configured) {
     return { storageKey: localTempPath };
   }
@@ -83,7 +83,7 @@ export async function storeJobPhoto(localTempPath: string, filename: string): Pr
   const key = `job-photos/${filename}`;
   const body = fs.readFileSync(localTempPath);
   await getS3Client().send(
-    new PutObjectCommand({ Bucket: env.s3Bucket, Key: key, Body: body, ContentType: "image/jpeg" }),
+    new PutObjectCommand({ Bucket: env.s3Bucket, Key: key, Body: body, ContentType: contentType }),
   );
   fs.unlink(localTempPath, () => {});
   return { storageKey: key };

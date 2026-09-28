@@ -1,6 +1,7 @@
 import { NextFunction, Request, Response } from "express";
 import { Prisma } from "@prisma/client";
 import { ZodError } from "zod";
+import multer from "multer";
 import { Sentry } from "../config/sentry";
 
 export class HttpError extends Error {
@@ -29,6 +30,12 @@ export function errorHandler(err: unknown, req: Request, res: Response, next: Ne
   if (err instanceof HttpError) {
     if (err.status >= 500) Sentry.captureException(err);
     return res.status(err.status).json({ error: err.message });
+  }
+  // A rejected upload (too large, wrong field) is the caller's mistake, not a
+  // server bug — don't report it to Sentry as one.
+  if (err instanceof multer.MulterError) {
+    const message = err.code === "LIMIT_FILE_SIZE" ? "File is too large" : err.message;
+    return res.status(400).json({ error: message });
   }
   console.error(err);
   Sentry.captureException(err);

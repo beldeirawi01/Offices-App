@@ -32,6 +32,12 @@ const upload = multer({
     },
   }),
   limits: { fileSize: 25 * 1024 * 1024 }, // 25MB, matches Whisper's cap
+  fileFilter: (_req, file, cb) => {
+    if (!file.mimetype.startsWith("audio/")) {
+      return cb(new HttpError(400, "Uploaded file must be an audio recording"));
+    }
+    cb(null, true);
+  },
 });
 
 /**
@@ -56,7 +62,7 @@ voiceRouter.post("/jobs/:jobId/voice-notes", requireAuth, requireActiveSubscript
   });
   if (!job) throw new HttpError(404, "Job not found");
 
-  const stored = await storeVoiceNoteAudio(req.file.path, req.file.filename);
+  const stored = await storeVoiceNoteAudio(req.file.path, req.file.filename, req.file.mimetype);
 
   const voiceNote = await prisma.voiceNote.create({
     data: {

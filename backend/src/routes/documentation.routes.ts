@@ -35,6 +35,15 @@ const upload = multer({
     },
   }),
   limits: { fileSize: 25 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    if (file.fieldname === "photo" && !file.mimetype.startsWith("image/")) {
+      return cb(new HttpError(400, "Documentation photo must be an image file"));
+    }
+    if (file.fieldname === "audio" && !file.mimetype.startsWith("audio/")) {
+      return cb(new HttpError(400, "Documentation audio must be an audio recording"));
+    }
+    cb(null, true);
+  },
 });
 
 const stageSchema = z.enum(["ARRIVAL", "MID_JOB", "COMPLETION"]);
@@ -64,9 +73,9 @@ documentationRouter.post(
     const job = await prisma.job.findFirst({ where: { id: req.params.jobId, organizationId: req.auth!.organizationId } });
     if (!job) throw new HttpError(404, "Job not found");
 
-    const storedPhoto = await storeJobPhoto(photoFile.path, photoFile.filename);
+    const storedPhoto = await storeJobPhoto(photoFile.path, photoFile.filename, photoFile.mimetype);
     const audioFile = files?.audio?.[0];
-    const storedAudio = audioFile ? await storeVoiceNoteAudio(audioFile.path, audioFile.filename) : null;
+    const storedAudio = audioFile ? await storeVoiceNoteAudio(audioFile.path, audioFile.filename, audioFile.mimetype) : null;
 
     const doc = await prisma.jobDocumentation.create({
       data: {
