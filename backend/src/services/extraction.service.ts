@@ -16,8 +16,8 @@ function getClient(): Anthropic {
 
 export const extractedLineItemSchema = z.object({
   description: z.string(),
-  quantity: z.number().default(1),
-  unitPrice: z.number().default(0),
+  quantity: z.number().nonnegative().default(1),
+  unitPrice: z.number().nonnegative().default(0),
   kind: z.enum(["PART", "LABOR"]).default("PART"),
 });
 
@@ -25,8 +25,8 @@ export const extractedJobSchema = z.object({
   customerName: z.string().nullable(),
   jobType: z.string().nullable(),
   summary: z.string(),
-  laborHours: z.number().nullable(),
-  laborRate: z.number().nullable(),
+  laborHours: z.number().nonnegative().nullable(),
+  laborRate: z.number().nonnegative().nullable(),
   lineItems: z.array(extractedLineItemSchema).default([]),
   notes: z.string().nullable(),
 });
