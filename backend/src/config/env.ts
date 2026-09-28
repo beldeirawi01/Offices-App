@@ -65,3 +65,36 @@ export const env = {
 
   sentryDsn: process.env.SENTRY_DSN ?? "",
 };
+
+/**
+ * Checks the things that are always required to run at all (a database to
+ * connect to) or that would be a serious, easy-to-miss problem specifically
+ * in production (booting with the hardcoded dev JWT secret, or with no CORS
+ * allowlist so the real dashboard can't reach the API). Deliberately does
+ * NOT require the third-party integration keys (OpenAI, Twilio, Stripe,
+ * S3, ...) — the app is designed to run in a degraded-but-functional mode
+ * without those, failing clearly only when a feature that needs one is
+ * actually used, not at startup.
+ *
+ * Called explicitly from index.ts (the real server entrypoint) rather than
+ * automatically at module load, so importing env.ts from a test or script
+ * never triggers it.
+ */
+export function validateEnv(): string[] {
+  const problems: string[] = [];
+
+  if (!env.databaseUrl) {
+    problems.push("DATABASE_URL is not set");
+  }
+
+  if (env.nodeEnv === "production") {
+    if (!process.env.JWT_SECRET) {
+      problems.push("JWT_SECRET is not set — refusing to run in production with the default development secret");
+    }
+    if (env.allowedOrigins.length === 0) {
+      problems.push("ALLOWED_ORIGINS is not set — no origin will be able to call this API in production");
+    }
+  }
+
+  return problems;
+}
