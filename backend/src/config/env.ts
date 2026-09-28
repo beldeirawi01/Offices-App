@@ -64,6 +64,13 @@ export const env = {
   s3SecretAccessKey: process.env.S3_SECRET_ACCESS_KEY ?? "",
 
   sentryDsn: process.env.SENTRY_DSN ?? "",
+
+  // Lowest mobile app version (matches mobile/app.json's "version") still
+  // allowed to call the API. "0.0.0" (the default) allows everything — set
+  // this once you've actually published a versioned build and want to be
+  // able to force techs off an old one that behaves in a way this backend
+  // no longer supports.
+  mobileMinVersion: process.env.MOBILE_MIN_VERSION ?? "0.0.0",
 };
 
 /**

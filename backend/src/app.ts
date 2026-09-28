@@ -7,6 +7,7 @@ import { env } from "./config/env";
 import { prisma } from "./db/prisma";
 import { errorHandler } from "./middleware/errorHandler";
 import { requestId } from "./middleware/requestId";
+import { minAppVersion } from "./middleware/minAppVersion";
 import { apiLimiter, authLimiter, voiceUploadLimiter } from "./middleware/rateLimit";
 import { authRouter } from "./routes/auth.routes";
 import { clientsRouter } from "./routes/clients.routes";
@@ -26,6 +27,7 @@ export const app = express();
 
 app.use(requestId);
 app.use(helmet());
+app.use(minAppVersion);
 
 // In development, allow any origin so localhost dashboard/mobile testing just
 // works. In production, ALLOWED_ORIGINS must be set — an empty allowlist there

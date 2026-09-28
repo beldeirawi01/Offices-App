@@ -1,17 +1,21 @@
 import axios from "axios";
 import Constants from "expo-constants";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Alert } from "react-native";
+import { getSecureItem } from "../services/secureStorage";
 
 const apiBaseUrl = (Constants.expoConfig?.extra?.apiBaseUrl as string) ?? "http://localhost:4000/api";
+const appVersion = Constants.expoConfig?.version ?? "0.0.0";
 
 export const api = axios.create({ baseURL: apiBaseUrl });
 
 api.interceptors.request.use(async (config) => {
-  const token = await AsyncStorage.getItem("token");
+  const token = await getSecureItem("token");
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
+  // Lets the backend force an update once MOBILE_MIN_VERSION is raised past
+  // this build — the dashboard never sends this header, so it's unaffected.
+  config.headers["X-App-Version"] = appVersion;
   return config;
 });
 
@@ -20,6 +24,10 @@ api.interceptors.request.use(async (config) => {
 // pretending the request failed for some other reason. Guarded so a screen
 // firing several requests at once (e.g. Promise.all) only shows one alert.
 let subscriptionAlertShowing = false;
+// No dismiss action — unlike a lapsed subscription, this genuinely can't be
+// worked around from inside the app, so the alert re-shows on every request
+// until the tech actually updates.
+let updateAlertShowing = false;
 api.interceptors.response.use(
   (response) => response,
   (error) => {
@@ -29,6 +37,14 @@ api.interceptors.response.use(
         "Subscription needed",
         "Your business's Jobscribe subscription has ended. Ask the owner to renew it from the web dashboard's Settings page.",
         [{ text: "OK", onPress: () => (subscriptionAlertShowing = false) }],
+      );
+    }
+    if (error.response?.status === 426 && !updateAlertShowing) {
+      updateAlertShowing = true;
+      Alert.alert(
+        "Update required",
+        "This version of Jobscribe is no longer supported. Please update from the App Store or Play Store to continue.",
+        [{ text: "OK", onPress: () => (updateAlertShowing = false) }],
       );
     }
     return Promise.reject(error);
