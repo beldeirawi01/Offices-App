@@ -1,7 +1,12 @@
 import { Router } from "express";
 import Stripe from "stripe";
+import { Prisma } from "@prisma/client";
 import { prisma } from "../db/prisma";
 import { verifyStripeWebhook, verifyStripeConnectWebhook, mapStripeSubscriptionStatus } from "../services/payment.service";
+
+function isUniqueConstraintError(err: unknown): boolean {
+  return err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002";
+}
 
 export const paymentsRouter = Router();
 
@@ -36,13 +41,40 @@ async function handleSubscriptionStatusChange(subscription: Stripe.Subscription)
 }
 
 /**
- * Shared by both webhook endpoints below. `event.account` is only present
- * on events delivered to the Connect-scoped endpoint (a payment made on one
- * of our connected accounts) — when present, we double-check it actually
- * matches the invoice's own organization before trusting it, since Stripe
- * guarantees the field but a mismatch here would mean a real bug elsewhere.
+ * Shared by both webhook endpoints below. Claims the event id first (atomic
+ * insert into StripeWebhookEvent) so a redelivery — Stripe retries on any
+ * non-2xx/timeout, and the platform + Connect streams are independent, so
+ * either can redeliver — is skipped instead of reapplied. If the actual
+ * handling below throws, the claim is released so a genuine retry (as
+ * opposed to a duplicate) still gets processed rather than silently dropped.
  */
 async function processStripeEvent(event: Stripe.Event) {
+  try {
+    await prisma.stripeWebhookEvent.create({ data: { id: event.id, type: event.type } });
+  } catch (err) {
+    if (isUniqueConstraintError(err)) {
+      console.log(`Stripe event ${event.id} (${event.type}) already processed, skipping`);
+      return;
+    }
+    throw err;
+  }
+
+  try {
+    await applyStripeEvent(event);
+  } catch (err) {
+    await prisma.stripeWebhookEvent.delete({ where: { id: event.id } }).catch(() => {});
+    throw err;
+  }
+}
+
+/**
+ * `event.account` is only present on events delivered to the Connect-scoped
+ * endpoint (a payment made on one of our connected accounts) — when present,
+ * we double-check it actually matches the invoice's own organization before
+ * trusting it, since Stripe guarantees the field but a mismatch here would
+ * mean a real bug elsewhere.
+ */
+async function applyStripeEvent(event: Stripe.Event) {
   if (
     event.type === "customer.subscription.created" ||
     event.type === "customer.subscription.updated" ||

@@ -373,3 +373,16 @@ model InvoiceDelivery {
 
   @@index([invoiceId])
 }
+
+// Records every Stripe event id we've started processing, from both the
+// platform webhook and the Connect webhook (event ids are globally unique
+// across both streams). Inserting this row is how we atomically claim an
+// event: a duplicate delivery's insert hits the unique constraint on `id`
+// and is skipped, closing the race a plain "does a Payment already exist"
+// check can't — two concurrent deliveries can both pass that check before
+// either has written its Payment row.
+model StripeWebhookEvent {
+  id        String   @id
+  type      String
+  createdAt DateTime @default(now())
+}
