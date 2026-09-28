@@ -9,6 +9,7 @@ import { createPaymentLinkForInvoice } from "../services/payment.service";
 import { deliverInvoiceToClient } from "../services/notification.service";
 import { renderInvoicePdf } from "../services/pdf.service";
 import { createInvoiceFromLineItems, DraftLineItem } from "../services/invoice.service";
+import { lineItemAmount, sumMoney, calculateTax } from "../utils/money";
 
 export const invoicesRouter = Router();
 invoicesRouter.use(requireAuth);
@@ -153,7 +154,7 @@ invoicesRouter.put("/:id", async (req, res) => {
         description: item.description,
         quantity: item.quantity,
         unitPrice: item.unitPrice,
-        amount: item.quantity * item.unitPrice,
+        amount: lineItemAmount(item.quantity, item.unitPrice),
         kind: item.kind,
       })),
     });
@@ -163,8 +164,8 @@ invoicesRouter.put("/:id", async (req, res) => {
     prisma.lineItem.findMany({ where: { invoiceId: existing.id } }),
     prisma.organization.findUniqueOrThrow({ where: { id: req.auth!.organizationId } }),
   ]);
-  const subtotal = lineItems.reduce((sum, item) => sum + item.amount, 0);
-  const tax = subtotal * org.taxRate;
+  const subtotal = sumMoney(lineItems.map((item) => item.amount));
+  const tax = calculateTax(subtotal, org.taxRate);
 
   const invoice = await prisma.invoice.update({
     where: { id: existing.id },
@@ -173,7 +174,7 @@ invoicesRouter.put("/:id", async (req, res) => {
       dueDate: body.dueDate ?? existing.dueDate,
       subtotal,
       tax,
-      total: subtotal + tax,
+      total: subtotal.plus(tax),
     },
     include: { lineItems: true },
   });
@@ -214,7 +215,7 @@ invoicesRouter.post("/:id/send", async (req, res) => {
     const link = await createPaymentLinkForInvoice({
       invoiceId: invoice.id,
       invoiceNumber: invoice.invoiceNumber,
-      totalCents: Math.round(invoice.total * 100),
+      totalCents: Math.round(invoice.total.times(100).toNumber()),
       stripeAccountId: invoice.organization.stripeAccountId,
     });
     paymentUrl = link.url;

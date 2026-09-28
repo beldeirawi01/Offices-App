@@ -1,4 +1,5 @@
 import twilio from "twilio";
+import { Prisma } from "@prisma/client";
 import { env } from "../config/env";
 
 let twilioClient: ReturnType<typeof twilio> | null = null;
@@ -65,7 +66,7 @@ export async function deliverInvoiceToClient(params: {
   clientSmsConsent: boolean;
   invoiceNumber: string;
   pageUrl: string;
-  total: number;
+  total: Prisma.Decimal;
   businessName: string;
 }): Promise<DeliveryResult[]> {
   const results: DeliveryResult[] = [];
@@ -121,7 +122,7 @@ export async function deliverQuoteToClient(params: {
   clientSmsConsent: boolean;
   quoteNumber: string;
   pageUrl: string;
-  total: number;
+  total: Prisma.Decimal;
   businessName: string;
 }): Promise<DeliveryResult[]> {
   const results: DeliveryResult[] = [];
@@ -173,7 +174,7 @@ export async function sendInvoiceReminder(params: {
   clientSmsConsent: boolean;
   invoiceNumber: string;
   pageUrl: string;
-  total: number;
+  total: Prisma.Decimal;
   daysOverdue: number;
   businessName: string;
 }): Promise<DeliveryResult[]> {

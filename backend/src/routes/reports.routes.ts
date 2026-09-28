@@ -1,7 +1,9 @@
 import { Router } from "express";
+import { Prisma } from "@prisma/client";
 import { prisma } from "../db/prisma";
 import { requireAuth } from "../middleware/auth";
 import { requireActiveSubscription } from "../middleware/subscription";
+import { sumMoney } from "../utils/money";
 
 export const reportsRouter = Router();
 reportsRouter.use(requireAuth);
@@ -17,15 +19,15 @@ reportsRouter.get("/summary", async (req, res) => {
     prisma.job.findMany({ where: { organizationId }, select: { jobType: true, scheduledAt: true, status: true } }),
   ]);
 
-  const totalRevenue = paidInvoices.reduce((sum, inv) => sum + inv.total, 0);
-  const outstandingBalance = outstandingInvoices.reduce((sum, inv) => sum + inv.total, 0);
+  const totalRevenue = sumMoney(paidInvoices.map((inv) => inv.total));
+  const outstandingBalance = sumMoney(outstandingInvoices.map((inv) => inv.total));
 
-  const revenueByMonth = new Map<string, number>();
+  const revenueByMonth = new Map<string, Prisma.Decimal>();
   for (const invoice of paidInvoices) {
     const key = invoice.paidAt
       ? `${invoice.paidAt.getFullYear()}-${String(invoice.paidAt.getMonth() + 1).padStart(2, "0")}`
       : "unknown";
-    revenueByMonth.set(key, (revenueByMonth.get(key) ?? 0) + invoice.total);
+    revenueByMonth.set(key, (revenueByMonth.get(key) ?? new Prisma.Decimal(0)).plus(invoice.total));
   }
 
   const jobTypeBreakdown = new Map<string, number>();

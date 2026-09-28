@@ -1,6 +1,10 @@
 import PDFDocument from "pdfkit";
 import { PassThrough } from "stream";
+import { Prisma } from "@prisma/client";
 
+// Prisma.Decimal implements the same .toFixed(dp) interface as a plain JS
+// number, so it's used directly here rather than converting to number —
+// money is Decimal everywhere except the final "%s" formatting.
 interface InvoicePdfData {
   invoiceNumber: string;
   createdAt: Date;
@@ -8,10 +12,10 @@ interface InvoicePdfData {
   status: string;
   organizationName: string;
   client: { name: string; email: string | null; phone: string | null; addressLine1: string | null };
-  lineItems: { description: string; quantity: number; unitPrice: number; amount: number }[];
-  subtotal: number;
-  tax: number;
-  total: number;
+  lineItems: { description: string; quantity: number; unitPrice: Prisma.Decimal; amount: Prisma.Decimal }[];
+  subtotal: Prisma.Decimal;
+  tax: Prisma.Decimal;
+  total: Prisma.Decimal;
   notes: string | null;
 }
 

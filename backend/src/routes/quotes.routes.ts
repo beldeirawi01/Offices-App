@@ -8,6 +8,7 @@ import { env } from "../config/env";
 import { deliverQuoteToClient } from "../services/notification.service";
 import { createQuoteFromLineItems, convertQuoteToInvoice } from "../services/quote.service";
 import { DraftLineItem } from "../services/invoice.service";
+import { lineItemAmount, sumMoney, calculateTax } from "../utils/money";
 
 export const quotesRouter = Router();
 quotesRouter.use(requireAuth);
@@ -123,7 +124,7 @@ quotesRouter.put("/:id", async (req, res) => {
         description: item.description,
         quantity: item.quantity,
         unitPrice: item.unitPrice,
-        amount: item.quantity * item.unitPrice,
+        amount: lineItemAmount(item.quantity, item.unitPrice),
         kind: item.kind,
       })),
     });
@@ -133,8 +134,8 @@ quotesRouter.put("/:id", async (req, res) => {
     prisma.quoteLineItem.findMany({ where: { quoteId: existing.id } }),
     prisma.organization.findUniqueOrThrow({ where: { id: req.auth!.organizationId } }),
   ]);
-  const subtotal = lineItems.reduce((sum, item) => sum + item.amount, 0);
-  const tax = subtotal * org.taxRate;
+  const subtotal = sumMoney(lineItems.map((item) => item.amount));
+  const tax = calculateTax(subtotal, org.taxRate);
 
   const quote = await prisma.quote.update({
     where: { id: existing.id },
@@ -142,7 +143,7 @@ quotesRouter.put("/:id", async (req, res) => {
       notes: body.notes ?? existing.notes,
       subtotal,
       tax,
-      total: subtotal + tax,
+      total: subtotal.plus(tax),
     },
     include: { lineItems: true },
   });

@@ -254,10 +254,14 @@ model Invoice {
   publicToken    String        @unique @default(uuid())
   status         InvoiceStatus @default(DRAFT)
   laborHours     Float?
-  laborRate      Float?
-  subtotal       Float         @default(0)
-  tax            Float         @default(0)
-  total          Float         @default(0)
+  // Money fields are Decimal (exact, base-10), never Float — a client
+  // shouldn't see $149.9800000000001 because of binary floating-point
+  // rounding. Serialized back to a plain JSON number for API responses via
+  // the global Decimal.prototype.toJSON patch in db/prisma.ts.
+  laborRate      Decimal?      @db.Decimal(12, 2)
+  subtotal       Decimal       @default(0) @db.Decimal(12, 2)
+  tax            Decimal       @default(0) @db.Decimal(12, 2)
+  total          Decimal       @default(0) @db.Decimal(12, 2)
   notes          String?
   dueDate        DateTime?
   sentAt         DateTime?
@@ -283,8 +287,8 @@ model LineItem {
   invoiceId   String
   description String
   quantity    Float    @default(1)
-  unitPrice   Float
-  amount      Float
+  unitPrice   Decimal  @db.Decimal(12, 2)
+  amount      Decimal  @db.Decimal(12, 2)
   kind        String   @default("PART") // PART or LABOR
   createdAt   DateTime @default(now())
 
@@ -305,10 +309,10 @@ model Quote {
   publicToken    String       @unique @default(uuid())
   status         QuoteStatus  @default(DRAFT)
   laborHours     Float?
-  laborRate      Float?
-  subtotal       Float        @default(0)
-  tax            Float        @default(0)
-  total          Float        @default(0)
+  laborRate      Decimal?     @db.Decimal(12, 2)
+  subtotal       Decimal      @default(0) @db.Decimal(12, 2)
+  tax            Decimal      @default(0) @db.Decimal(12, 2)
+  total          Decimal      @default(0) @db.Decimal(12, 2)
   notes          String?
   sentAt         DateTime?
   respondedAt    DateTime?
@@ -331,8 +335,8 @@ model QuoteLineItem {
   quoteId     String
   description String
   quantity    Float    @default(1)
-  unitPrice   Float
-  amount      Float
+  unitPrice   Decimal  @db.Decimal(12, 2)
+  amount      Decimal  @db.Decimal(12, 2)
   kind        String   @default("PART") // PART or LABOR
   createdAt   DateTime @default(now())
 
@@ -356,7 +360,7 @@ model Payment {
   id              String        @id @default(cuid())
   invoice         Invoice       @relation(fields: [invoiceId], references: [id])
   invoiceId       String
-  amount          Float
+  amount          Decimal       @db.Decimal(12, 2)
   status          PaymentStatus @default(PENDING)
   stripePaymentIntentId String?
   createdAt       DateTime      @default(now())

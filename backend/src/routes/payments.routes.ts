@@ -133,7 +133,7 @@ async function applyStripeEvent(event: Stripe.Event) {
   await prisma.payment.create({
     data: {
       invoiceId,
-      amount: (object.amount_total ?? object.amount ?? 0) / 100,
+      amount: new Prisma.Decimal(object.amount_total ?? object.amount ?? 0).dividedBy(100),
       status: "SUCCEEDED",
       stripePaymentIntentId: paymentIntentId,
     },

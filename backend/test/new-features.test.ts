@@ -69,7 +69,7 @@ describe("mark invoice paid manually", () => {
 
     const payments = await prisma.payment.findMany({ where: { invoiceId: createRes.body.id } });
     expect(payments).toHaveLength(1);
-    expect(payments[0].amount).toBe(200);
+    expect(payments[0].amount.toNumber()).toBe(200);
   });
 
   it("refuses to mark an already-paid invoice paid again", async () => {

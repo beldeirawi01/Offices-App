@@ -29,8 +29,8 @@ describe("createDraftInvoiceFromExtraction", () => {
 
     const laborItems = invoice.lineItems.filter((i) => i.kind === "LABOR");
     expect(laborItems).toHaveLength(1);
-    expect(laborItems[0].amount).toBe(180);
-    expect(invoice.subtotal).toBe(15 + 180);
+    expect(laborItems[0].amount.toNumber()).toBe(180);
+    expect(invoice.subtotal.toNumber()).toBe(15 + 180);
   });
 
   it("does not double-bill labor when extraction already itemized a LABOR line item", async () => {
@@ -59,7 +59,7 @@ describe("createDraftInvoiceFromExtraction", () => {
 
     const laborItems = invoice.lineItems.filter((i) => i.kind === "LABOR");
     expect(laborItems).toHaveLength(1);
-    expect(invoice.subtotal).toBe(180);
+    expect(invoice.subtotal.toNumber()).toBe(180);
   });
 });
 

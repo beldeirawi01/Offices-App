@@ -1,7 +1,9 @@
+import { Prisma } from "@prisma/client";
 import { prisma } from "../db/prisma";
 import { ExtractedJob } from "./extraction.service";
 import { DraftLineItem } from "./invoice.service";
 import { HttpError } from "../middleware/errorHandler";
+import { lineItemAmount, sumMoney, calculateTax } from "../utils/money";
 
 function generateQuoteNumber(): string {
   const stamp = Date.now().toString(36).toUpperCase();
@@ -29,9 +31,10 @@ export async function createQuoteFromLineItems(params: {
 
   const org = await prisma.organization.findUniqueOrThrow({ where: { id: organizationId } });
 
-  const subtotal = lineItems.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
-  const tax = subtotal * org.taxRate;
-  const total = subtotal + tax;
+  const lineItemAmounts = lineItems.map((item) => lineItemAmount(item.quantity, item.unitPrice));
+  const subtotal = sumMoney(lineItemAmounts);
+  const tax = calculateTax(subtotal, org.taxRate);
+  const total = subtotal.plus(tax);
 
   return prisma.quote.create({
     data: {
@@ -47,11 +50,11 @@ export async function createQuoteFromLineItems(params: {
       total,
       notes: notes ?? undefined,
       lineItems: {
-        create: lineItems.map((item) => ({
+        create: lineItems.map((item, i) => ({
           description: item.description,
           quantity: item.quantity,
           unitPrice: item.unitPrice,
-          amount: item.quantity * item.unitPrice,
+          amount: lineItemAmounts[i],
           kind: item.kind,
         })),
       },
@@ -78,7 +81,7 @@ export async function createDraftQuoteFromExtraction(params: {
 
   const laborAmount =
     !alreadyHasLaborLineItem && extracted.laborHours != null && extracted.laborRate != null
-      ? extracted.laborHours * extracted.laborRate
+      ? new Prisma.Decimal(extracted.laborHours).times(extracted.laborRate).toDecimalPlaces(2).toNumber()
       : 0;
 
   if (laborAmount > 0) {
@@ -135,11 +138,11 @@ export async function convertQuoteToInvoice(quoteId: string) {
     lineItems: quote.lineItems.map((item) => ({
       description: item.description,
       quantity: item.quantity,
-      unitPrice: item.unitPrice,
+      unitPrice: item.unitPrice.toNumber(),
       kind: item.kind as "PART" | "LABOR",
     })),
     laborHours: quote.laborHours,
-    laborRate: quote.laborRate,
+    laborRate: quote.laborRate?.toNumber() ?? null,
     notes: quote.notes,
   });
 
