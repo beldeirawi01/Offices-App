@@ -9,9 +9,24 @@ function getClient(): Anthropic {
     throw new Error("ANTHROPIC_API_KEY is not configured");
   }
   if (!client) {
-    client = new Anthropic({ apiKey: env.anthropicApiKey });
+    // Timeout so a slow/hung request fails the voice note instead of hanging
+    // it forever, and let the SDK retry transient network/5xx errors with
+    // backoff rather than failing the whole job on one blip.
+    client = new Anthropic({ apiKey: env.anthropicApiKey, timeout: 60_000, maxRetries: 3 });
   }
   return client;
+}
+
+/**
+ * Thrown when Claude's response can't be parsed as JSON or fails schema
+ * validation (e.g. a hallucinated negative price). Carries the raw model
+ * text so a bad extraction can be debugged instead of just logging "invalid".
+ */
+export class ExtractionValidationError extends Error {
+  constructor(message: string, public readonly rawOutput: string) {
+    super(message);
+    this.name = "ExtractionValidationError";
+  }
 }
 
 export const extractedLineItemSchema = z.object({
@@ -81,7 +96,15 @@ Rules:
 - Keep "summary" to 1-3 sentences describing the proposed work, written for a client-facing quote.
 - Never invent a customer name, part, or price that wasn't mentioned or clearly implied.`;
 
-async function runExtraction(transcript: string, systemPrompt: string): Promise<ExtractedJob> {
+export interface ExtractionResult {
+  result: ExtractedJob;
+  // Claude's raw text response, before JSON parsing/validation — kept so a
+  // bad extraction (malformed JSON, a rejected hallucinated price) can be
+  // debugged from what the model actually said, not just an error string.
+  raw: string;
+}
+
+async function runExtraction(transcript: string, systemPrompt: string): Promise<ExtractionResult> {
   const anthropic = getClient();
 
   const message = await anthropic.messages.create({
@@ -99,17 +122,32 @@ async function runExtraction(transcript: string, systemPrompt: string): Promise<
   if (!textBlock || textBlock.type !== "text") {
     throw new Error("Claude returned no text content");
   }
+  const raw = textBlock.text;
 
-  const jsonText = extractJsonFromText(textBlock.text);
-  const parsed = JSON.parse(jsonText);
-  return extractedJobSchema.parse(parsed);
+  let parsed: unknown;
+  try {
+    const jsonText = extractJsonFromText(raw);
+    parsed = JSON.parse(jsonText);
+  } catch (err) {
+    throw new ExtractionValidationError(
+      `Claude's response wasn't valid JSON: ${err instanceof Error ? err.message : String(err)}`,
+      raw,
+    );
+  }
+
+  const validation = extractedJobSchema.safeParse(parsed);
+  if (!validation.success) {
+    throw new ExtractionValidationError(`Claude's response failed validation: ${validation.error.message}`, raw);
+  }
+
+  return { result: validation.data, raw };
 }
 
 /**
  * Sends a raw transcript to Claude and gets back clean, structured
  * billing data the backend can turn directly into an invoice draft.
  */
-export async function extractJobDetails(transcript: string): Promise<ExtractedJob> {
+export async function extractJobDetails(transcript: string): Promise<ExtractionResult> {
   return runExtraction(transcript, SYSTEM_PROMPT);
 }
 
@@ -117,7 +155,7 @@ export async function extractJobDetails(transcript: string): Promise<ExtractedJo
  * Same shape, but for a pre-job estimate spoken on arrival — used to draft a
  * quote rather than an invoice.
  */
-export async function extractQuoteDetails(transcript: string): Promise<ExtractedJob> {
+export async function extractQuoteDetails(transcript: string): Promise<ExtractionResult> {
   return runExtraction(transcript, QUOTE_SYSTEM_PROMPT);
 }
 

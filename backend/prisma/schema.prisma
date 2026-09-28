@@ -194,6 +194,10 @@ model VoiceNote {
   audioUrl       String
   transcript     String?
   extractedJson  Json?
+  // Claude's raw text response, before JSON parsing/validation — kept even
+  // when extraction fails so a bad/hallucinated result can be debugged from
+  // what the model actually said.
+  rawExtraction  String?
   status         String   @default("UPLOADED") // UPLOADED, TRANSCRIBING, TRANSCRIBED, EXTRACTING, EXTRACTED, FAILED
   errorMessage   String?
   // QUOTE (pre-job estimate, spoken on arrival) or INVOICE (post-job actuals,

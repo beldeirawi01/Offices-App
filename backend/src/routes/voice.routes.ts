@@ -7,7 +7,7 @@ import { requireAuth } from "../middleware/auth";
 import { requireActiveSubscription } from "../middleware/subscription";
 import { HttpError } from "../middleware/errorHandler";
 import { transcribeAudio } from "../services/transcription.service";
-import { extractJobDetails, extractQuoteDetails } from "../services/extraction.service";
+import { extractJobDetails, extractQuoteDetails, ExtractionValidationError } from "../services/extraction.service";
 import { createDraftInvoiceFromExtraction, mergeExtractionIntoInvoice } from "../services/invoice.service";
 import { createDraftQuoteFromExtraction } from "../services/quote.service";
 import { storeVoiceNoteAudio, getVoiceNoteAudioLocalPath, isCloudStorageConfigured, localUploadDir } from "../services/storage.service";
@@ -95,10 +95,11 @@ async function processVoiceNote(
     });
 
     await prisma.voiceNote.update({ where: { id: voiceNoteId }, data: { status: "EXTRACTING" } });
-    const extracted = purpose === "QUOTE" ? await extractQuoteDetails(transcript) : await extractJobDetails(transcript);
+    const extraction = purpose === "QUOTE" ? await extractQuoteDetails(transcript) : await extractJobDetails(transcript);
+    const extracted = extraction.result;
     await prisma.voiceNote.update({
       where: { id: voiceNoteId },
-      data: { status: "EXTRACTED", extractedJson: extracted as any },
+      data: { status: "EXTRACTED", extractedJson: extracted as any, rawExtraction: extraction.raw },
     });
 
     if (purpose === "QUOTE") {
@@ -121,7 +122,13 @@ async function processVoiceNote(
   } catch (err) {
     await prisma.voiceNote.update({
       where: { id: voiceNoteId },
-      data: { status: "FAILED", errorMessage: err instanceof Error ? err.message : "Unknown error" },
+      data: {
+        status: "FAILED",
+        errorMessage: err instanceof Error ? err.message : "Unknown error",
+        // A validation failure still carries what Claude actually said, so a
+        // hallucinated/malformed extraction can be debugged after the fact.
+        ...(err instanceof ExtractionValidationError ? { rawExtraction: err.rawOutput } : {}),
+      },
     });
   } finally {
     // If audio was downloaded from S3 into a scratch temp file, clean it up.
