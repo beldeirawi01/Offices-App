@@ -1,8 +1,9 @@
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useFocusEffect } from "@react-navigation/native";
 import { FlatList, RefreshControl, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { api, Job, Paginated } from "../api/client";
+import { subscribeToQueue } from "../services/uploadQueue";
 import { useAuth } from "../context/AuthContext";
 import { RootStackParamList } from "../navigation/types";
 import { colors, radius, spacing } from "../theme";
@@ -14,6 +15,9 @@ export default function JobListScreen({ navigation }: Props) {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [pendingUploads, setPendingUploads] = useState(0);
+
+  useEffect(() => subscribeToQueue((items) => setPendingUploads(items.length)), []);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -48,6 +52,13 @@ export default function JobListScreen({ navigation }: Props) {
       </TouchableOpacity>
 
       {loadError && <Text style={styles.loadError}>{loadError}</Text>}
+      {pendingUploads > 0 && (
+        <View style={styles.pendingBanner}>
+          <Text style={styles.pendingBannerText}>
+            {pendingUploads} recording{pendingUploads === 1 ? "" : "s"} waiting for signal to upload
+          </Text>
+        </View>
+      )}
 
       <FlatList
         data={jobs}
@@ -128,4 +139,12 @@ const styles = StyleSheet.create({
   actionHint: { fontSize: 12, color: colors.steelLight, marginTop: spacing.sm },
   empty: { textAlign: "center", color: colors.steel, marginTop: 40 },
   loadError: { textAlign: "center", color: colors.danger, marginBottom: spacing.md },
+  pendingBanner: {
+    backgroundColor: colors.warningBg,
+    borderRadius: radius.sm,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    marginBottom: spacing.md,
+  },
+  pendingBannerText: { color: colors.warning, fontWeight: "600", textAlign: "center", fontSize: 13 },
 });

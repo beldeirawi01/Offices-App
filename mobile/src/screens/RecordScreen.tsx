@@ -3,12 +3,13 @@ import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useEffect, useRef, useState } from "react";
 import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { api } from "../api/client";
+import { enqueueVoiceNote } from "../services/uploadQueue";
 import { RootStackParamList } from "../navigation/types";
 import { colors, radius, spacing } from "../theme";
 
 type Props = NativeStackScreenProps<RootStackParamList, "Record">;
 
-type RecordingState = "idle" | "recording" | "uploading" | "processing" | "error";
+type RecordingState = "idle" | "recording" | "uploading" | "processing" | "queued" | "error";
 
 export default function RecordScreen({ route, navigation }: Props) {
   const { jobId, jobTitle, purpose } = route.params;
@@ -53,20 +54,16 @@ export default function RecordScreen({ route, navigation }: Props) {
     }
 
     try {
-      const formData = new FormData();
-      formData.append("audio", {
-        uri,
-        name: "job-note.m4a",
-        type: "audio/m4a",
-      } as any);
-      formData.append("purpose", purpose);
-
-      const { data } = await api.post(`/jobs/${jobId}/voice-notes`, formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
-
+      const result = await enqueueVoiceNote({ jobId, purpose, audioUri: uri });
+      if (result.queued) {
+        // No signal right now — the recording is safely saved on-device and
+        // will upload automatically once there's a connection. There's
+        // nothing to review yet since the server hasn't processed it.
+        setState("queued");
+        return;
+      }
       setState("processing");
-      pollForResult(data.voiceNoteId);
+      pollForResult(result.voiceNoteId!);
     } catch (err: any) {
       setState("error");
       setErrorMessage(err?.response?.data?.error ?? "Upload failed. Check your connection and try again.");
@@ -133,6 +130,19 @@ export default function RecordScreen({ route, navigation }: Props) {
         </View>
       )}
 
+      {state === "queued" && (
+        <View style={styles.centered}>
+          <Text style={styles.queuedTitle}>Saved ✓</Text>
+          <Text style={styles.queuedSub}>
+            No signal right now — this recording is saved on your phone and will upload automatically once you're
+            back online. You'll find the {isQuote ? "quote" : "invoice"} on this job once it's processed.
+          </Text>
+          <TouchableOpacity style={styles.recordButton} onPress={() => navigation.goBack()}>
+            <Text style={styles.recordButtonText}>Back to job</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
       {state === "error" && (
         <View style={styles.centered}>
           <Text style={styles.error}>{errorMessage}</Text>
@@ -177,4 +187,6 @@ const styles = StyleSheet.create({
   centered: { alignItems: "center", gap: spacing.lg },
   processingLabel: { color: colors.steel, marginTop: spacing.md, textAlign: "center" },
   error: { color: colors.danger, textAlign: "center", marginBottom: spacing.lg },
+  queuedTitle: { fontSize: 22, fontWeight: "800", color: colors.success, marginBottom: spacing.md },
+  queuedSub: { color: colors.steel, textAlign: "center", marginBottom: spacing.xl, paddingHorizontal: spacing.md },
 });

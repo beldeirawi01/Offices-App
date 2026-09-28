@@ -1,8 +1,11 @@
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
-import { ActivityIndicator, View } from "react-native";
+import { useEffect } from "react";
+import { ActivityIndicator, AppState, View } from "react-native";
 import { StatusBar } from "expo-status-bar";
+import NetInfo from "@react-native-community/netinfo";
 import { AuthProvider, useAuth } from "./src/context/AuthContext";
+import { processQueue } from "./src/services/uploadQueue";
 import { RootStackParamList } from "./src/navigation/types";
 import { colors } from "./src/theme";
 import LoginScreen from "./src/screens/LoginScreen";
@@ -67,6 +70,28 @@ function RootNavigator() {
 }
 
 function App() {
+  useEffect(() => {
+    // Catch up on anything queued while offline: on launch, whenever
+    // connectivity comes back, and whenever the app returns to the
+    // foreground (a tech often records in a dead zone, then drives to
+    // where they have signal without ever force-quitting the app).
+    processQueue();
+
+    const unsubscribeNetInfo = NetInfo.addEventListener((state) => {
+      if (state.isConnected && state.isInternetReachable !== false) {
+        processQueue();
+      }
+    });
+    const appStateSubscription = AppState.addEventListener("change", (nextState) => {
+      if (nextState === "active") processQueue();
+    });
+
+    return () => {
+      unsubscribeNetInfo();
+      appStateSubscription.remove();
+    };
+  }, []);
+
   return (
     <AuthProvider>
       <NavigationContainer>

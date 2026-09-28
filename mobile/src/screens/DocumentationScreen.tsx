@@ -4,7 +4,7 @@ import * as Location from "expo-location";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useRef, useState } from "react";
 import { ActivityIndicator, Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { api } from "../api/client";
+import { enqueueDocumentation } from "../services/uploadQueue";
 import { RootStackParamList } from "../navigation/types";
 import { colors, radius, spacing } from "../theme";
 
@@ -31,6 +31,7 @@ export default function DocumentationScreen({ route, navigation }: Props) {
   const [audioUri, setAudioUri] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [queued, setQueued] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const recordingRef = useRef<Audio.Recording | null>(null);
 
@@ -91,20 +92,15 @@ export default function DocumentationScreen({ route, navigation }: Props) {
     try {
       const coords = await getCoords();
 
-      const formData = new FormData();
-      formData.append("stage", stage);
-      if (coords) {
-        formData.append("latitude", String(coords.latitude));
-        formData.append("longitude", String(coords.longitude));
-      }
-      formData.append("photo", { uri: photoUri, name: "documentation.jpg", type: "image/jpeg" } as any);
-      if (audioUri) {
-        formData.append("audio", { uri: audioUri, name: "documentation.m4a", type: "audio/m4a" } as any);
-      }
-
-      await api.post(`/jobs/${jobId}/documentation`, formData, {
-        headers: { "Content-Type": "multipart/form-data" },
+      const result = await enqueueDocumentation({
+        jobId,
+        stage,
+        photoUri,
+        audioUri,
+        latitude: coords?.latitude ?? null,
+        longitude: coords?.longitude ?? null,
       });
+      if (result.queued) setQueued(true);
       setSaved(true);
     } catch (err: any) {
       setErrorMessage(err?.response?.data?.error ?? "Could not save documentation. Try again.");
@@ -117,7 +113,11 @@ export default function DocumentationScreen({ route, navigation }: Props) {
     return (
       <View style={styles.centered}>
         <Text style={styles.doneTitle}>Documentation saved ✓</Text>
-        <Text style={styles.doneSub}>Kept as evidence for this job — not sent to the client.</Text>
+        <Text style={styles.doneSub}>
+          {queued
+            ? "No signal right now — saved on your phone and will upload automatically once you're back online."
+            : "Kept as evidence for this job — not sent to the client."}
+        </Text>
         <TouchableOpacity style={styles.primaryButton} onPress={() => navigation.goBack()}>
           <Text style={styles.primaryButtonText}>Back to job</Text>
         </TouchableOpacity>
