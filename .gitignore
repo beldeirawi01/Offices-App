@@ -10,6 +10,7 @@ coverage/
 .expo-shared/
 web-build/
 backend/uploads/
+backend/backups/
 *.pem
 .vscode/*
 !.vscode/settings.json

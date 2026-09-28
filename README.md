@@ -132,7 +132,7 @@ CI (`.github/workflows/backend-tests.yml`) runs this automatically against a fre
 - **Twilio compliance**: complete A2P 10DLC/toll-free registration before sending SMS at volume; the app already gates SMS on a `smsConsent` flag per client, but the registration itself is done in your Twilio console.
 - **Deployment**: `render.yaml` (Render Blueprint) and `backend/Dockerfile` are ready to deploy from — you still need to connect your own Render/Railway account, and fill in the `sync: false` env vars in the dashboard after first deploy.
 - **App store submission**: `mobile/` needs an Apple Developer account and Google Play Console account, plus an EAS Build + submission run — code is ready, publishing is a manual process only you can complete.
-- **Backups**: set up automated Postgres backups on whatever host you choose (most managed Postgres offerings include this — verify it's actually turned on).
+- **Backups**: `backend/scripts/backup-db.sh` / `restore-db.sh` and `backend/docs/BACKUP_RESTORE.md` cover the mechanism (and a restore has been tested end to end), but *scheduling* it is a hosting decision — set up automated Postgres backups on whatever host you choose (most managed Postgres offerings include this — verify it's actually turned on).
 
 ## Hosting
 
