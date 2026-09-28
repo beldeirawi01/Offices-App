@@ -25,6 +25,11 @@ export const env = {
   twilioAccountSid: process.env.TWILIO_ACCOUNT_SID ?? "",
   twilioAuthToken: process.env.TWILIO_AUTH_TOKEN ?? "",
   twilioFromNumber: process.env.TWILIO_FROM_NUMBER ?? "",
+  // This backend's own public URL (e.g. https://api.jobscribe.com), used only
+  // to reconstruct the exact webhook URL Twilio signs against when verifying
+  // an inbound SMS request — must match the URL configured on the Twilio
+  // number exactly (scheme, host, path).
+  apiPublicUrl: process.env.API_PUBLIC_URL ?? "",
 
   brevoApiKey: process.env.BREVO_API_KEY ?? "",
   brevoFromEmail: process.env.BREVO_FROM_EMAIL ?? "",

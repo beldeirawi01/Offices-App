@@ -20,6 +20,7 @@ import { reportsRouter } from "./routes/reports.routes";
 import { usersRouter } from "./routes/users.routes";
 import { publicRouter } from "./routes/public.routes";
 import { organizationsRouter } from "./routes/organizations.routes";
+import { twilioRouter } from "./routes/twilio.routes";
 
 export const app = express();
 
@@ -54,6 +55,11 @@ app.use(apiLimiter);
 // mounted before the JSON body parser. Covers both the platform-account
 // webhook and the Connect-scoped one (see routes/payments.routes.ts).
 app.use("/api/payments", express.raw({ type: "application/json" }), paymentsRouter);
+
+// Twilio posts application/x-www-form-urlencoded and signs the request
+// against that exact parsed body, so this also needs its own parser ahead
+// of the global JSON one (see routes/twilio.routes.ts).
+app.use("/api/webhooks/twilio", express.urlencoded({ extended: false }), twilioRouter);
 
 app.use(express.json());
 

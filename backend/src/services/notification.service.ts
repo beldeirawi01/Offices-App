@@ -14,10 +14,12 @@ function getTwilioClient() {
   return twilioClient;
 }
 
-// Twilio's carrier-level opt-out (replying STOP) is handled automatically for
-// numbers registered on a Messaging Service — no code-side handling needed,
-// but you must complete A2P 10DLC/toll-free registration before sending at
-// volume, and every message must be sent to a client with smsConsent=true.
+// Twilio's carrier-level opt-out (replying STOP) blocks delivery
+// automatically for numbers on a Messaging Service, but doesn't update our
+// own Client.smsConsent — see routes/twilio.routes.ts for the inbound
+// webhook that keeps that in sync. You must also complete A2P 10DLC/
+// toll-free registration before sending at volume, and every message must
+// be sent to a client with smsConsent=true.
 export async function sendSms(params: { to: string; body: string }) {
   const client = getTwilioClient();
   return client.messages.create({ to: params.to, from: env.twilioFromNumber, body: params.body });
