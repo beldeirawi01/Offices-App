@@ -24,20 +24,25 @@ export function isForeignKeyConstraintError(err: unknown): boolean {
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function errorHandler(err: unknown, req: Request, res: Response, next: NextFunction) {
+  Sentry.getCurrentScope().setTag("requestId", req.id);
+
   if (err instanceof ZodError) {
-    return res.status(400).json({ error: "Validation failed", details: err.flatten() });
+    return res.status(400).json({ error: "Validation failed", details: err.flatten(), requestId: req.id });
   }
   if (err instanceof HttpError) {
-    if (err.status >= 500) Sentry.captureException(err);
-    return res.status(err.status).json({ error: err.message });
+    if (err.status >= 500) {
+      console.error(`[${req.id}]`, err);
+      Sentry.captureException(err);
+    }
+    return res.status(err.status).json({ error: err.message, requestId: req.id });
   }
   // A rejected upload (too large, wrong field) is the caller's mistake, not a
   // server bug — don't report it to Sentry as one.
   if (err instanceof multer.MulterError) {
     const message = err.code === "LIMIT_FILE_SIZE" ? "File is too large" : err.message;
-    return res.status(400).json({ error: message });
+    return res.status(400).json({ error: message, requestId: req.id });
   }
-  console.error(err);
+  console.error(`[${req.id}]`, err);
   Sentry.captureException(err);
-  return res.status(500).json({ error: "Internal server error" });
+  return res.status(500).json({ error: "Internal server error", requestId: req.id });
 }

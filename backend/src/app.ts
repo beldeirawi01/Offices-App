@@ -6,6 +6,7 @@ import morgan from "morgan";
 import { env } from "./config/env";
 import { prisma } from "./db/prisma";
 import { errorHandler } from "./middleware/errorHandler";
+import { requestId } from "./middleware/requestId";
 import { apiLimiter, authLimiter, voiceUploadLimiter } from "./middleware/rateLimit";
 import { authRouter } from "./routes/auth.routes";
 import { clientsRouter } from "./routes/clients.routes";
@@ -22,6 +23,7 @@ import { organizationsRouter } from "./routes/organizations.routes";
 
 export const app = express();
 
+app.use(requestId);
 app.use(helmet());
 
 // In development, allow any origin so localhost dashboard/mobile testing just
@@ -36,8 +38,15 @@ if (env.nodeEnv === "development" || env.nodeEnv === "test" || env.allowedOrigin
   app.use(cors({ origin: env.allowedOrigins }));
 }
 
+morgan.token("req-id", (req) => (req as express.Request).id);
+// Same fields as morgan's built-in "dev"/"combined" formats, with the
+// request id prefixed so an access log line can be matched to an error log
+// line or a Sentry event for the same request.
+const devLogFormat = ":req-id :method :url :status :response-time ms - :res[content-length]";
+const prodLogFormat =
+  ':req-id :remote-addr - :remote-user [:date[clf]] ":method :url HTTP/:http-version" :status :res[content-length] ":referrer" ":user-agent"';
 if (env.nodeEnv !== "test") {
-  app.use(morgan(env.nodeEnv === "development" ? "dev" : "combined"));
+  app.use(morgan(env.nodeEnv === "development" ? devLogFormat : prodLogFormat));
 }
 app.use(apiLimiter);
 
