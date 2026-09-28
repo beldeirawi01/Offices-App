@@ -1,6 +1,6 @@
 import fs from "fs";
 import path from "path";
-import { S3Client, PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { env } from "../config/env";
 
@@ -103,6 +103,23 @@ export async function getJobPhotoSignedUrl(storageKey: string): Promise<string> 
 
 export function isCloudStorageConfigured(): boolean {
   return isS3Configured;
+}
+
+/**
+ * Deletes a previously stored file (voice note audio or job photo) by its
+ * storage key — an S3 object key, or a local file path when S3 isn't
+ * configured. Used both when audio is purged after successful transcription
+ * (see voice.routes.ts) and when an organization's account is deleted.
+ * Swallows "already gone" so this is safe to call more than once.
+ */
+export async function deleteStoredFile(storageKey: string): Promise<void> {
+  if (!isS3Configured) {
+    await fs.promises.unlink(storageKey).catch((err) => {
+      if (err.code !== "ENOENT") throw err;
+    });
+    return;
+  }
+  await getS3Client().send(new DeleteObjectCommand({ Bucket: env.s3Bucket, Key: storageKey }));
 }
 
 export { localUploadDir, localPhotoUploadDir };

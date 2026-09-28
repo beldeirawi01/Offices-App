@@ -1,5 +1,15 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+// A minimal-but-real WAV header (RIFF/WAVE magic bytes) — the backend now
+// checks actual file signatures rather than trusting the declared
+// Content-Type (see backend/src/utils/fileSignature.ts), so a plain text
+// buffer no longer passes as "audio" here.
+const tinyWav = Buffer.from([
+  0x52, 0x49, 0x46, 0x46, 0x24, 0x00, 0x00, 0x00, 0x57, 0x41, 0x56, 0x45, 0x66, 0x6d, 0x74, 0x20, 0x10, 0x00, 0x00,
+  0x00, 0x01, 0x00, 0x01, 0x00, 0x44, 0xac, 0x00, 0x00, 0x88, 0x58, 0x01, 0x00, 0x02, 0x00, 0x10, 0x00, 0x64, 0x61,
+  0x74, 0x61, 0x00, 0x00, 0x00, 0x00,
+]);
+
 // MAX_VOICE_UPLOADS_PER_ORG_PER_MONTH is read once at env.ts module load, so
 // testing a non-default cap means resetting the module registry and
 // re-importing everything (env, app, and the test helpers, which hold their
@@ -30,7 +40,7 @@ describe("per-org voice/documentation usage cap", () => {
     const res = await request(app)
       .post(`/api/jobs/${jobRes.body.id}/voice-notes`)
       .set("Authorization", `Bearer ${owner.token}`)
-      .attach("audio", Buffer.from("fake audio"), { filename: "note.m4a", contentType: "audio/m4a" });
+      .attach("audio", tinyWav, { filename: "note.wav", contentType: "audio/wav" });
 
     expect(res.status).toBe(429);
   });
@@ -45,7 +55,7 @@ describe("per-org voice/documentation usage cap", () => {
     const res = await request(app)
       .post(`/api/jobs/${jobRes.body.id}/voice-notes`)
       .set("Authorization", `Bearer ${owner.token}`)
-      .attach("audio", Buffer.from("fake audio"), { filename: "note.m4a", contentType: "audio/m4a" });
+      .attach("audio", tinyWav, { filename: "note.wav", contentType: "audio/wav" });
 
     expect(res.status).toBe(202);
   });
@@ -90,7 +100,7 @@ describe("per-org voice/documentation usage cap", () => {
       .set("Authorization", `Bearer ${owner.token}`)
       .field("stage", "ARRIVAL")
       .attach("photo", tinyJpeg, "arrival.jpg")
-      .attach("audio", Buffer.from("fake audio"), { filename: "note.m4a", contentType: "audio/m4a" });
+      .attach("audio", tinyWav, { filename: "note.wav", contentType: "audio/wav" });
 
     expect(res.status).toBe(429);
   });

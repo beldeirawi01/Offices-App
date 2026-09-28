@@ -18,6 +18,7 @@ import {
   localPhotoUploadDir,
   localUploadDir,
 } from "../services/storage.service";
+import { looksLikeAudio, looksLikeImage } from "../utils/fileSignature";
 
 export const documentationRouter = Router();
 // NOTE: mounted at bare "/api" in app.ts, same reasoning as voiceRouter — its
@@ -66,6 +67,15 @@ documentationRouter.post(
     const files = req.files as { photo?: Express.Multer.File[]; audio?: Express.Multer.File[] } | undefined;
     const photoFile = files?.photo?.[0];
     if (!photoFile) throw new HttpError(400, "Missing photo file field 'photo'");
+    const audioFile = files?.audio?.[0];
+
+    // fileFilter above only saw the client-declared Content-Type, which is
+    // easy to spoof — this checks what was actually written to disk.
+    if (!looksLikeImage(photoFile.path) || (audioFile && !looksLikeAudio(audioFile.path))) {
+      fs.unlink(photoFile.path, () => {});
+      if (audioFile) fs.unlink(audioFile.path, () => {});
+      throw new HttpError(400, "Uploaded file does not look like a valid photo or audio recording");
+    }
 
     const stage = stageSchema.parse(req.body.stage);
     const latitude = req.body.latitude != null && req.body.latitude !== "" ? Number(req.body.latitude) : undefined;
@@ -74,7 +84,6 @@ documentationRouter.post(
     const job = await prisma.job.findFirst({ where: { id: req.params.jobId, organizationId: req.auth!.organizationId } });
     if (!job) throw new HttpError(404, "Job not found");
 
-    const audioFile = files?.audio?.[0];
     // Only checked when this request actually includes audio — a photo-only
     // documentation entry costs nothing to transcribe and shouldn't be
     // blocked by an org's voice-note cap.

@@ -3,6 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import { api, Organization } from "../api/client";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../components/Toast";
+import { useConfirm } from "../components/ConfirmDialog";
 import { CheckCircleIcon, AlertCircleIcon } from "../components/Icons";
 
 // Common US timezones — covers the target audience (US trades businesses)
@@ -18,8 +19,9 @@ const TIMEZONE_OPTIONS = [
 ];
 
 export default function Settings() {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const toast = useToast();
+  const confirm = useConfirm();
   const [searchParams, setSearchParams] = useSearchParams();
   const isOwner = user?.role === "OWNER";
 
@@ -43,6 +45,11 @@ export default function Settings() {
   const [passwordSaving, setPasswordSaving] = useState(false);
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [passwordSuccess, setPasswordSuccess] = useState(false);
+
+  const [exporting, setExporting] = useState(false);
+  const [deletePassword, setDeletePassword] = useState("");
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const loadOrg = () => {
     api
@@ -179,6 +186,46 @@ export default function Settings() {
       setPasswordError(err?.response?.data?.error ?? "Could not change password");
     } finally {
       setPasswordSaving(false);
+    }
+  };
+
+  const onExportData = async () => {
+    setExporting(true);
+    try {
+      const res = await api.get("/organizations/me/export", { responseType: "blob" });
+      const url = URL.createObjectURL(new Blob([res.data], { type: "application/json" }));
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "jobscribe-data-export.json";
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (err: any) {
+      toast.error(err?.response?.data?.error ?? "Could not export your data");
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const onDeleteAccount = async (e: FormEvent) => {
+    e.preventDefault();
+    setDeleteError(null);
+
+    const ok = await confirm({
+      title: "Delete your account?",
+      message:
+        "This permanently deletes your business's entire Jobscribe account — every client, job, invoice, quote, and recording. There is no undo, and no one (including support) can recover it afterward.",
+      confirmLabel: "Delete everything",
+      danger: true,
+    });
+    if (!ok) return;
+
+    setDeleting(true);
+    try {
+      await api.post("/organizations/me/delete", { password: deletePassword });
+      logout();
+    } catch (err: any) {
+      setDeleteError(err?.response?.data?.error ?? "Could not delete your account");
+      setDeleting(false);
     }
   };
 
@@ -450,6 +497,46 @@ export default function Settings() {
             </button>
           </div>
         </form>
+      </section>
+
+      <section className="panel">
+        <h2>Your data</h2>
+        <div className="form-card">
+          <p className="muted small">
+            Download everything Jobscribe has stored for your business — clients, jobs, invoices, quotes, and voice
+            note transcripts — as a JSON file. Photo/audio files themselves aren't included in the download; only
+            their metadata is.
+          </p>
+          <div className="button-row">
+            <button type="button" className="btn-secondary" onClick={onExportData} disabled={exporting}>
+              {exporting ? "Preparing export..." : "Export my data"}
+            </button>
+          </div>
+        </div>
+
+        {isOwner && (
+          <form className="form-card" onSubmit={onDeleteAccount} style={{ marginTop: 16 }}>
+            <h3>Delete account</h3>
+            {deleteError && <div className="error-banner">{deleteError}</div>}
+            <p className="muted small">
+              Permanently deletes your business's entire account and everything in it. This cannot be undone.
+            </p>
+            <label>
+              Confirm your password
+              <input
+                type="password"
+                value={deletePassword}
+                onChange={(e) => setDeletePassword(e.target.value)}
+                required
+              />
+            </label>
+            <div className="form-actions">
+              <button type="submit" className="btn-danger" disabled={deleting || !deletePassword}>
+                {deleting ? "Deleting..." : "Delete my account permanently"}
+              </button>
+            </div>
+          </form>
+        )}
       </section>
     </div>
   );

@@ -167,6 +167,17 @@ export async function createBillingPortalLink(customerId: string, returnUrl: str
   return session.url;
 }
 
+/**
+ * Cancels the platform subscription immediately — called when an owner
+ * deletes their whole Jobscribe account, so they don't keep getting charged
+ * $29/month for an account that no longer has any data in it. Deleting our
+ * own database rows never touches Stripe on its own.
+ */
+export async function cancelSubscription(subscriptionId: string): Promise<void> {
+  const stripe = getClient();
+  await stripe.subscriptions.cancel(subscriptionId);
+}
+
 export type MappedSubscriptionStatus = "TRIALING" | "ACTIVE" | "PAST_DUE" | "CANCELED" | "INCOMPLETE";
 
 /** Collapses Stripe's finer-grained subscription statuses onto our own enum. */

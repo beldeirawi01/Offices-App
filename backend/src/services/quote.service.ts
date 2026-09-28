@@ -5,14 +5,6 @@ import { DraftLineItem } from "./invoice.service";
 import { HttpError } from "../middleware/errorHandler";
 import { lineItemAmount, sumMoney, calculateTax } from "../utils/money";
 
-function generateQuoteNumber(): string {
-  const stamp = Date.now().toString(36).toUpperCase();
-  const rand = Math.floor(Math.random() * 1000)
-    .toString()
-    .padStart(3, "0");
-  return `QTE-${stamp}-${rand}`;
-}
-
 /**
  * Creates a DRAFT quote from a fixed set of line items, applying the same
  * tax math as invoices so an accepted quote converts into an invoice with a
@@ -29,7 +21,13 @@ export async function createQuoteFromLineItems(params: {
 }) {
   const { organizationId, clientId, jobId, lineItems, laborHours, laborRate, notes } = params;
 
-  const org = await prisma.organization.findUniqueOrThrow({ where: { id: organizationId } });
+  // See createInvoiceFromLineItems in invoice.service.ts — same atomic
+  // claim-and-read pattern via quoteSequence.
+  const org = await prisma.organization.update({
+    where: { id: organizationId },
+    data: { quoteSequence: { increment: 1 } },
+  });
+  const quoteNumber = `QTE-${String(org.quoteSequence).padStart(6, "0")}`;
 
   const lineItemAmounts = lineItems.map((item) => lineItemAmount(item.quantity, item.unitPrice));
   const subtotal = sumMoney(lineItemAmounts);
@@ -41,7 +39,7 @@ export async function createQuoteFromLineItems(params: {
       organizationId,
       clientId,
       jobId: jobId ?? undefined,
-      quoteNumber: generateQuoteNumber(),
+      quoteNumber,
       status: "DRAFT",
       laborHours: laborHours ?? undefined,
       laborRate: laborRate ?? undefined,

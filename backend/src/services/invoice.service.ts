@@ -3,14 +3,6 @@ import { prisma } from "../db/prisma";
 import { ExtractedJob } from "./extraction.service";
 import { lineItemAmount, sumMoney, calculateTax } from "../utils/money";
 
-function generateInvoiceNumber(): string {
-  const stamp = Date.now().toString(36).toUpperCase();
-  const rand = Math.floor(Math.random() * 1000)
-    .toString()
-    .padStart(3, "0");
-  return `INV-${stamp}-${rand}`;
-}
-
 export interface DraftLineItem {
   description: string;
   quantity: number;
@@ -36,7 +28,15 @@ export async function createInvoiceFromLineItems(params: {
 }) {
   const { organizationId, clientId, jobId, lineItems, laborHours, laborRate, notes, dueDate } = params;
 
-  const org = await prisma.organization.findUniqueOrThrow({ where: { id: organizationId } });
+  // Atomically claims the next sequence number and reads the org's tax rate
+  // in one round trip — `{ increment: 1 }` compiles to a single
+  // `UPDATE ... SET "invoiceSequence" = "invoiceSequence" + 1`, so concurrent
+  // invoice creation for the same org can't collide on the same number.
+  const org = await prisma.organization.update({
+    where: { id: organizationId },
+    data: { invoiceSequence: { increment: 1 } },
+  });
+  const invoiceNumber = `INV-${String(org.invoiceSequence).padStart(6, "0")}`;
 
   const lineItemAmounts = lineItems.map((item) => lineItemAmount(item.quantity, item.unitPrice));
   const subtotal = sumMoney(lineItemAmounts);
@@ -48,7 +48,7 @@ export async function createInvoiceFromLineItems(params: {
       organizationId,
       clientId,
       jobId: jobId ?? undefined,
-      invoiceNumber: generateInvoiceNumber(),
+      invoiceNumber,
       status: "DRAFT",
       laborHours: laborHours ?? undefined,
       laborRate: laborRate ?? undefined,

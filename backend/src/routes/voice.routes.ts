@@ -11,7 +11,14 @@ import { transcribeAudio } from "../services/transcription.service";
 import { extractJobDetails, extractQuoteDetails, ExtractionValidationError } from "../services/extraction.service";
 import { createDraftInvoiceFromExtraction, mergeExtractionIntoInvoice } from "../services/invoice.service";
 import { createDraftQuoteFromExtraction } from "../services/quote.service";
-import { storeVoiceNoteAudio, getVoiceNoteAudioLocalPath, isCloudStorageConfigured, localUploadDir } from "../services/storage.service";
+import {
+  storeVoiceNoteAudio,
+  getVoiceNoteAudioLocalPath,
+  deleteStoredFile,
+  isCloudStorageConfigured,
+  localUploadDir,
+} from "../services/storage.service";
+import { looksLikeAudio } from "../utils/fileSignature";
 
 export const voiceRouter = Router();
 // NOTE: this router is mounted at bare "/api" in app.ts (its two routes don't
@@ -57,6 +64,12 @@ voiceRouter.post(
   async (req, res) => {
     if (!req.file) {
       throw new HttpError(400, "Missing audio file field 'audio'");
+    }
+    // fileFilter above only saw the client-declared Content-Type, which is
+    // easy to spoof — this checks what was actually written to disk.
+    if (!looksLikeAudio(req.file.path)) {
+      fs.unlink(req.file.path, () => {});
+      throw new HttpError(400, "Uploaded file does not look like a valid audio recording");
     }
 
     // QUOTE (on-arrival estimate) or INVOICE (post-job actuals, the default —
@@ -132,6 +145,17 @@ async function processVoiceNote(
         // first note winning. No-ops if the invoice has already been sent.
         await mergeExtractionIntoInvoice(existingInvoice.id, extracted);
       }
+    }
+
+    // The recording has done its job (a quote/invoice now exists from it) and
+    // nothing in the app ever plays it back — see the audioDeleted field
+    // comment in schema.prisma for the reasoning. Best-effort: a delete
+    // failure here shouldn't undo the otherwise-successful pipeline run.
+    try {
+      await deleteStoredFile(storageKey);
+      await prisma.voiceNote.update({ where: { id: voiceNoteId }, data: { audioDeleted: true } });
+    } catch (err) {
+      console.error(`Failed to delete audio for voice note ${voiceNoteId} after processing`, err);
     }
   } catch (err) {
     await prisma.voiceNote.update({

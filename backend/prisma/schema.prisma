@@ -102,6 +102,16 @@ model Organization {
   trialEndsAt                  DateTime?
   subscriptionCurrentPeriodEnd DateTime?
 
+  // Sequential, per-business invoice/quote numbers (INV-000001, QTE-000001,
+  // ...) rather than a timestamp+random string — trades are used to
+  // sequential paper invoice books and expect gaps to mean something.
+  // Incremented via an atomic `UPDATE ... SET x = x + 1 RETURNING x`
+  // (Prisma's `{ increment: 1 }`), so two invoices created at the same
+  // instant still get distinct numbers — Postgres serializes concurrent
+  // updates to the same row instead of losing one.
+  invoiceSequence Int @default(0)
+  quoteSequence   Int @default(0)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -196,6 +206,15 @@ model VoiceNote {
   job            Job      @relation(fields: [jobId], references: [id])
   jobId          String
   audioUrl       String
+  // Once the pipeline successfully reaches EXTRACTED (a quote/invoice has
+  // been drafted from it), the audio file itself is deleted — the transcript
+  // above is kept as the durable record, but there's no ongoing reason to
+  // keep the client's raw recording once it's been turned into structured
+  // billing data (nothing in the app ever plays it back). Left in place on
+  // FAILED so a failed extraction can still be retried/debugged from the
+  // original audio. `audioUrl` is kept as a historical reference even after
+  // deletion (the key it WAS at), not re-resolvable once audioDeleted is true.
+  audioDeleted   Boolean  @default(false)
   transcript     String?
   extractedJson  Json?
   // Claude's raw text response, before JSON parsing/validation — kept even
@@ -246,7 +265,11 @@ model Invoice {
   clientId       String
   job            Job?          @relation(fields: [jobId], references: [id])
   jobId          String?       @unique
-  invoiceNumber  String        @unique
+  // Unique per-organization (not globally) — two different businesses both
+  // legitimately start at INV-000001, so the constraint has to include
+  // organizationId or the second business's first invoice would collide
+  // with the first's.
+  invoiceNumber  String
   // Unguessable token used to build the client-facing invoice/payment link,
   // so clients can view and pay without an account and without exposing the
   // sequential/internal invoice id. A UUID (not cuid) deliberately — cuid
@@ -277,6 +300,7 @@ model Invoice {
   payments  Payment[]
   deliveries InvoiceDelivery[]
 
+  @@unique([organizationId, invoiceNumber])
   @@index([organizationId])
   @@index([clientId])
 }
@@ -303,7 +327,8 @@ model Quote {
   clientId       String
   job            Job?         @relation(fields: [jobId], references: [id])
   jobId          String?      @unique
-  quoteNumber    String       @unique
+  // Unique per-organization, not globally — see Invoice.invoiceNumber.
+  quoteNumber    String
   // Unguessable token for the client-facing quote page (view + accept/decline),
   // same pattern as Invoice.publicToken.
   publicToken    String       @unique @default(uuid())
@@ -325,6 +350,7 @@ model Quote {
   lineItems  QuoteLineItem[]
   deliveries QuoteDelivery[]
 
+  @@unique([organizationId, quoteNumber])
   @@index([organizationId])
   @@index([clientId])
 }
