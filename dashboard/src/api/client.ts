@@ -132,6 +132,7 @@ export interface Organization {
   id: string;
   name: string;
   taxRate: number;
+  timezone: string;
   stripeAccountId: string | null;
   stripeChargesEnabled: boolean;
   stripePayoutsEnabled: boolean;

@@ -22,6 +22,8 @@ organizationsRouter.get("/me", async (req, res) => {
   res.json(org);
 });
 
+const validTimezones = new Set(Intl.supportedValuesOf("timeZone"));
+
 const updateSchema = z.object({
   name: z.string().min(1).optional(),
   // Stored as a decimal fraction (0.0825 = 8.25%), but the dashboard sends/
@@ -31,6 +33,7 @@ const updateSchema = z.object({
   reviewRequestDelayDays: z.number().int().positive().optional(),
   reviewLinkUrl: z.string().url().optional().nullable(),
   rebookingRemindersEnabled: z.boolean().optional(),
+  timezone: z.string().refine((tz) => validTimezones.has(tz), "Not a recognized timezone").optional(),
 });
 
 organizationsRouter.put("/me", requireOwner, async (req, res) => {
@@ -44,6 +47,7 @@ organizationsRouter.put("/me", requireOwner, async (req, res) => {
       reviewRequestDelayDays: body.reviewRequestDelayDays,
       reviewLinkUrl: body.reviewLinkUrl,
       rebookingRemindersEnabled: body.rebookingRemindersEnabled,
+      timezone: body.timezone,
     },
   });
   res.json(org);

@@ -5,6 +5,18 @@ import { useAuth } from "../context/AuthContext";
 import { useToast } from "../components/Toast";
 import { CheckCircleIcon, AlertCircleIcon } from "../components/Icons";
 
+// Common US timezones — covers the target audience (US trades businesses)
+// without dumping the full ~400-entry IANA list into a dropdown.
+const TIMEZONE_OPTIONS = [
+  { value: "America/New_York", label: "Eastern (New York)" },
+  { value: "America/Chicago", label: "Central (Chicago)" },
+  { value: "America/Denver", label: "Mountain (Denver)" },
+  { value: "America/Phoenix", label: "Mountain, no DST (Phoenix)" },
+  { value: "America/Los_Angeles", label: "Pacific (Los Angeles)" },
+  { value: "America/Anchorage", label: "Alaska (Anchorage)" },
+  { value: "Pacific/Honolulu", label: "Hawaii (Honolulu)" },
+];
+
 export default function Settings() {
   const { user } = useAuth();
   const toast = useToast();
@@ -14,6 +26,7 @@ export default function Settings() {
   const [org, setOrg] = useState<Organization | null>(null);
   const [name, setName] = useState("");
   const [taxRatePercent, setTaxRatePercent] = useState("0");
+  const [timezone, setTimezone] = useState("America/New_York");
   const [orgSaving, setOrgSaving] = useState(false);
 
   const [stripeLoading, setStripeLoading] = useState(false);
@@ -38,6 +51,7 @@ export default function Settings() {
         setOrg(res.data);
         setName(res.data.name);
         setTaxRatePercent((res.data.taxRate * 100).toString());
+        setTimezone(res.data.timezone);
         setReviewRequestEnabled(res.data.reviewRequestEnabled);
         setReviewRequestDelayDays(res.data.reviewRequestDelayDays.toString());
         setReviewLinkUrl(res.data.reviewLinkUrl ?? "");
@@ -81,7 +95,7 @@ export default function Settings() {
     e.preventDefault();
     setOrgSaving(true);
     try {
-      await api.put("/organizations/me", { name, taxRatePercent: Number(taxRatePercent) });
+      await api.put("/organizations/me", { name, taxRatePercent: Number(taxRatePercent), timezone });
       toast.success("Business settings saved.");
     } catch (err: any) {
       toast.error(err?.response?.data?.error ?? "Could not save changes");
@@ -274,8 +288,24 @@ export default function Settings() {
                   onChange={(e) => setTaxRatePercent(e.target.value)}
                 />
               </label>
+              <label>
+                Timezone
+                <select value={timezone} onChange={(e) => setTimezone(e.target.value)}>
+                  {!TIMEZONE_OPTIONS.some((opt) => opt.value === timezone) && (
+                    <option value={timezone}>{timezone}</option>
+                  )}
+                  {TIMEZONE_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
             </div>
-            <p className="muted small">Applied automatically to every new invoice's subtotal.</p>
+            <p className="muted small">
+              Tax is applied automatically to every new invoice's subtotal. Timezone determines what time reminders and
+              review requests are sent — set this to where your business operates.
+            </p>
             <div className="form-actions">
               <button type="submit" disabled={orgSaving}>
                 {orgSaving ? "Saving..." : "Save"}

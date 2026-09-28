@@ -67,6 +67,10 @@ model Organization {
   // Sales tax rate as a decimal fraction (e.g. 0.0825 for 8.25%), applied to
   // every invoice's subtotal. Owner-configurable from Settings.
   taxRate   Float    @default(0)
+  // IANA timezone (e.g. "America/Chicago") this org operates in. Scheduled
+  // reminders/review requests are sent based on the local hour here, not the
+  // server's clock, so a client in Arizona isn't texted at 6am.
+  timezone  String   @default("America/New_York")
 
   // Stripe Connect — each business gets its own connected account so client
   // payments settle to their bank account, not ours. Populated once the

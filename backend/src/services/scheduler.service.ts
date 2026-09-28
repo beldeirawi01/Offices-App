@@ -5,6 +5,14 @@ import { sendInvoiceReminder, sendRebookingReminder, sendReviewRequest } from ".
 
 const REMINDER_INTERVAL_DAYS = 3;
 
+/** The local hour (0-23) it currently is for an org in its own timezone. */
+function currentHourInTimezone(date: Date, timezone: string): number {
+  const formatted = new Intl.DateTimeFormat("en-US", { timeZone: timezone, hour: "numeric", hourCycle: "h23" }).format(
+    date,
+  );
+  return parseInt(formatted, 10);
+}
+
 // Arbitrary distinct keys for Postgres advisory locks, one per send-type
 // scheduled job. Only jobs that actually send something to a client need
 // one — markOverdueInvoices is a plain idempotent status flip, safe for two
@@ -53,10 +61,18 @@ async function markOverdueInvoices() {
   if (count > 0) console.log(`[scheduler] Marked ${count} invoice(s) overdue`);
 }
 
+// Local hours (24h) each timezone-aware job is allowed to actually send at.
+// The cron trigger itself now runs hourly; these gate which of those hourly
+// ticks does anything for a given org, based on that org's own clock.
+const OVERDUE_REMINDER_HOURS = [9, 17];
+const REVIEW_REQUEST_HOUR = 10;
+const REBOOKING_REMINDER_HOUR = 11;
+
 /**
  * Sends a payment reminder for each overdue invoice that hasn't had one in
  * the last REMINDER_INTERVAL_DAYS, so clients get nudged automatically
- * instead of the owner having to chase payments by hand.
+ * instead of the owner having to chase payments by hand. Only sent when it's
+ * currently 9am or 5pm in the invoice's own organization's timezone.
  */
 async function sendOverdueRemindersImpl() {
   const now = new Date();
@@ -70,7 +86,10 @@ async function sendOverdueRemindersImpl() {
     include: { client: true, organization: true },
   });
 
+  let sentCount = 0;
   for (const invoice of overdueInvoices) {
+    if (!OVERDUE_REMINDER_HOURS.includes(currentHourInTimezone(now, invoice.organization.timezone))) continue;
+
     const daysOverdue = invoice.dueDate
       ? Math.max(1, Math.floor((now.getTime() - invoice.dueDate.getTime()) / (24 * 60 * 60 * 1000)))
       : 0;
@@ -87,13 +106,14 @@ async function sendOverdueRemindersImpl() {
         businessName: invoice.organization.name,
       });
       await prisma.invoice.update({ where: { id: invoice.id }, data: { lastReminderAt: now } });
+      sentCount += 1;
     } catch (err) {
       console.error(`[scheduler] Failed to send reminder for invoice ${invoice.id}`, err);
     }
   }
 
-  if (overdueInvoices.length > 0) {
-    console.log(`[scheduler] Sent ${overdueInvoices.length} overdue reminder(s)`);
+  if (sentCount > 0) {
+    console.log(`[scheduler] Sent ${sentCount} overdue reminder(s)`);
   }
 }
 
@@ -122,6 +142,7 @@ async function sendReviewRequestsImpl() {
     if (!invoice.paidAt || !invoice.organization.reviewLinkUrl) continue;
     const dueAt = new Date(invoice.paidAt.getTime() + invoice.organization.reviewRequestDelayDays * 24 * 60 * 60 * 1000);
     if (dueAt > now) continue;
+    if (currentHourInTimezone(now, invoice.organization.timezone) !== REVIEW_REQUEST_HOUR) continue;
 
     try {
       await sendReviewRequest({
@@ -168,6 +189,7 @@ async function sendRebookingRemindersImpl() {
     const dueAt = new Date(job.completedAt);
     dueAt.setMonth(dueAt.getMonth() + job.recurrenceIntervalMonths);
     if (dueAt > now) continue;
+    if (currentHourInTimezone(now, job.organization.timezone) !== REBOOKING_REMINDER_HOUR) continue;
 
     try {
       await sendRebookingReminder({
@@ -211,18 +233,19 @@ export function startScheduledJobs() {
     markOverdueInvoices().catch((err) => console.error("[scheduler] markOverdueInvoices failed", err));
   });
 
-  // Twice daily: nudge clients on invoices that are still overdue.
-  cron.schedule("0 9,17 * * *", () => {
+  // These three tick hourly rather than at a fixed server-clock time — each
+  // one internally only acts on candidates for whom it's currently their
+  // target local hour (OVERDUE_REMINDER_HOURS/REVIEW_REQUEST_HOUR/
+  // REBOOKING_REMINDER_HOUR above), computed from that org's own timezone.
+  cron.schedule("0 * * * *", () => {
     sendOverdueReminders().catch((err) => console.error("[scheduler] sendOverdueReminders failed", err));
   });
 
-  // Once daily: ask recently-paid clients for a review.
-  cron.schedule("0 10 * * *", () => {
+  cron.schedule("0 * * * *", () => {
     sendReviewRequests().catch((err) => console.error("[scheduler] sendReviewRequests failed", err));
   });
 
-  // Once daily: nudge clients whose recurring job type is due for a rebooking.
-  cron.schedule("0 11 * * *", () => {
+  cron.schedule("0 * * * *", () => {
     sendRebookingReminders().catch((err) => console.error("[scheduler] sendRebookingReminders failed", err));
   });
 
