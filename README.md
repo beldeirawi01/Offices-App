@@ -118,7 +118,7 @@ CI (`.github/workflows/backend-tests.yml`) runs this automatically against a fre
 - Job detail page tying together a job's info, assigned tech, voice notes/transcript, and invoice in one view
 - Edit/cancel flows for clients, jobs, and invoices in the dashboard
 - "Start an unscheduled job" flow in the mobile app for walk-ins
-- Error tracking wiring (Sentry, optional via `SENTRY_DSN`)
+- Error tracking wiring in all three apps (Sentry, optional via `SENTRY_DSN` on the backend, `VITE_SENTRY_DSN` on the dashboard, and the `sentryDsn` field under `expo.extra` in `mobile/app.json`) — a no-op everywhere it's left blank
 - A real backend test suite + CI
 - Voice-first quotes — an on-arrival estimate that the client accepts/declines, and auto-converts to an invoice when the job is marked complete (`backend/src/services/quote.service.ts`)
 - Multi-note job timeline — a job can collect several voice notes (an arrival quote, then one or more completion notes); every completion note's line items fold into the one draft invoice instead of only the first note winning (`invoice.service.ts#mergeExtractionIntoInvoice`), and the mobile job detail screen shows the full timeline

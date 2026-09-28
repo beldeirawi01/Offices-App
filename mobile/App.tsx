@@ -13,6 +13,9 @@ import DocumentationScreen from "./src/screens/DocumentationScreen";
 import RecordScreen from "./src/screens/RecordScreen";
 import QuoteReviewScreen from "./src/screens/QuoteReviewScreen";
 import InvoiceReviewScreen from "./src/screens/InvoiceReviewScreen";
+import { initSentry, Sentry } from "./src/config/sentry";
+
+initSentry();
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -63,7 +66,7 @@ function RootNavigator() {
   );
 }
 
-export default function App() {
+function App() {
   return (
     <AuthProvider>
       <NavigationContainer>
@@ -73,3 +76,8 @@ export default function App() {
     </AuthProvider>
   );
 }
+
+// Sentry.wrap is a no-op wrapper when Sentry was never initialized (no DSN
+// configured) — it also adds touch/navigation breadcrumbs and a root error
+// boundary when it was.
+export default Sentry.wrap(App);
