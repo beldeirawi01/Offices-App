@@ -100,6 +100,17 @@ npm test
 
 CI (`.github/workflows/backend-tests.yml`) runs this automatically against a fresh Postgres service container on every push/PR that touches `backend/`.
 
+The dashboard has a Playwright end-to-end suite (`dashboard/e2e/`) that drives the real UI against a real backend + an isolated `offices_app_e2e` database (never dev or test data) through the core value chain: register a business, add a client, schedule a job, create and pay an invoice.
+
+```bash
+createdb offices_app_e2e
+DATABASE_URL="postgresql://postgres:postgres@localhost:5432/offices_app_e2e" npx prisma migrate deploy --schema backend/prisma/schema.prisma
+cd dashboard
+npm run test:e2e
+```
+
+The mobile app has a Jest + React Native Testing Library suite (`mobile/__tests__/`) covering the login handoff between `LoginScreen` and `AuthContext` that every other screen depends on — not a device/simulator E2E run, since no emulator is assumed to be available. Run with `cd mobile && npm test`. Both suites run in CI (`dashboard-ci.yml`, `mobile-ci.yml`) on every push/PR that touches their respective app.
+
 ## What's implemented vs. what still needs your action before launch
 
 **Done in code:**

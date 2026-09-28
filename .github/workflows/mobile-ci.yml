@@ -30,3 +30,7 @@ jobs:
       # repo doesn't have. This still catches most regressions (bad imports,
       # type errors, API/type-shape mismatches across screens and services).
       - run: npm run lint
+      # Jest + React Native Testing Library, not a device/simulator E2E run —
+      # there's no emulator available in CI here. Covers the login handoff
+      # between LoginScreen and AuthContext that every other screen depends on.
+      - run: npm test
