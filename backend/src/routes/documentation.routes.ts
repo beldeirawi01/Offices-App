@@ -6,6 +6,7 @@ import { z } from "zod";
 import { prisma } from "../db/prisma";
 import { requireAuth, requireOwner } from "../middleware/auth";
 import { requireActiveSubscription } from "../middleware/subscription";
+import { assertWithinVoiceUsageCap } from "../middleware/voiceUsageCap";
 import { HttpError } from "../middleware/errorHandler";
 import { transcribeAudio } from "../services/transcription.service";
 import {
@@ -73,8 +74,15 @@ documentationRouter.post(
     const job = await prisma.job.findFirst({ where: { id: req.params.jobId, organizationId: req.auth!.organizationId } });
     if (!job) throw new HttpError(404, "Job not found");
 
-    const storedPhoto = await storeJobPhoto(photoFile.path, photoFile.filename, photoFile.mimetype);
     const audioFile = files?.audio?.[0];
+    // Only checked when this request actually includes audio — a photo-only
+    // documentation entry costs nothing to transcribe and shouldn't be
+    // blocked by an org's voice-note cap.
+    if (audioFile) {
+      await assertWithinVoiceUsageCap(req.auth!.organizationId);
+    }
+
+    const storedPhoto = await storeJobPhoto(photoFile.path, photoFile.filename, photoFile.mimetype);
     const storedAudio = audioFile ? await storeVoiceNoteAudio(audioFile.path, audioFile.filename, audioFile.mimetype) : null;
 
     const doc = await prisma.jobDocumentation.create({

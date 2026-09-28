@@ -106,6 +106,7 @@ CI (`.github/workflows/backend-tests.yml`) runs this automatically against a fre
 - Stripe Connect onboarding — each business connects its own bank account and gets paid directly, not through a shared platform account (see **Stripe Connect** above)
 - Multi-tenant isolation checks on jobs/clients (an org can't reference another org's data)
 - Rate limiting (auth, voice uploads, public endpoints) and a locked-down CORS allowlist for production
+- Per-organization monthly cap on voice-note + documentation-with-audio uploads (`MAX_VOICE_UPLOADS_PER_ORG_PER_MONTH`, defaults to 1000) — bounds worst-case Whisper/Claude spend from one heavy or runaway org without touching a photo-only documentation entry, which costs nothing to transcribe
 - Pagination and search on clients/jobs/invoices lists
 - Overdue invoice detection + automated payment reminders (background cron)
 - S3-compatible voice note storage (falls back to local disk only in dev)

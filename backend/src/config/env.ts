@@ -71,6 +71,13 @@ export const env = {
   // able to force techs off an old one that behaves in a way this backend
   // no longer supports.
   mobileMinVersion: process.env.MOBILE_MIN_VERSION ?? "0.0.0",
+
+  // Caps one organization's combined voice-note + documentation-with-audio
+  // uploads per calendar month, since each one is a real, billed Whisper +
+  // Claude call — bounds worst-case spend from one heavy or runaway org.
+  // 1000/month is generous for even a busy multi-tech shop while still
+  // capping exposure; raise it per-deployment if a real business needs more.
+  maxVoiceUploadsPerOrgPerMonth: Number(process.env.MAX_VOICE_UPLOADS_PER_ORG_PER_MONTH ?? 1000),
 };
 
 /**

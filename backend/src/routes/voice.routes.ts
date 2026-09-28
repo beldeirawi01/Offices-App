@@ -5,6 +5,7 @@ import fs from "fs";
 import { prisma } from "../db/prisma";
 import { requireAuth } from "../middleware/auth";
 import { requireActiveSubscription } from "../middleware/subscription";
+import { requireVoiceUsageWithinCap } from "../middleware/voiceUsageCap";
 import { HttpError } from "../middleware/errorHandler";
 import { transcribeAudio } from "../services/transcription.service";
 import { extractJobDetails, extractQuoteDetails, ExtractionValidationError } from "../services/extraction.service";
@@ -47,40 +48,47 @@ const upload = multer({
  * 3. Claude extracts structured billing fields
  * 4. A draft invoice is created for the tech to review before sending
  */
-voiceRouter.post("/jobs/:jobId/voice-notes", requireAuth, requireActiveSubscription, upload.single("audio"), async (req, res) => {
-  if (!req.file) {
-    throw new HttpError(400, "Missing audio file field 'audio'");
-  }
+voiceRouter.post(
+  "/jobs/:jobId/voice-notes",
+  requireAuth,
+  requireActiveSubscription,
+  requireVoiceUsageWithinCap,
+  upload.single("audio"),
+  async (req, res) => {
+    if (!req.file) {
+      throw new HttpError(400, "Missing audio file field 'audio'");
+    }
 
-  // QUOTE (on-arrival estimate) or INVOICE (post-job actuals, the default —
-  // keeps older mobile app builds that don't send this field working).
-  const purpose = req.body.purpose === "QUOTE" ? "QUOTE" : "INVOICE";
+    // QUOTE (on-arrival estimate) or INVOICE (post-job actuals, the default —
+    // keeps older mobile app builds that don't send this field working).
+    const purpose = req.body.purpose === "QUOTE" ? "QUOTE" : "INVOICE";
 
-  const job = await prisma.job.findFirst({
-    where: { id: req.params.jobId, organizationId: req.auth!.organizationId },
-    include: { client: true },
-  });
-  if (!job) throw new HttpError(404, "Job not found");
+    const job = await prisma.job.findFirst({
+      where: { id: req.params.jobId, organizationId: req.auth!.organizationId },
+      include: { client: true },
+    });
+    if (!job) throw new HttpError(404, "Job not found");
 
-  const stored = await storeVoiceNoteAudio(req.file.path, req.file.filename, req.file.mimetype);
+    const stored = await storeVoiceNoteAudio(req.file.path, req.file.filename, req.file.mimetype);
 
-  const voiceNote = await prisma.voiceNote.create({
-    data: {
-      jobId: job.id,
-      audioUrl: stored.storageKey,
-      status: "UPLOADED",
-      purpose,
-    },
-  });
+    const voiceNote = await prisma.voiceNote.create({
+      data: {
+        jobId: job.id,
+        audioUrl: stored.storageKey,
+        status: "UPLOADED",
+        purpose,
+      },
+    });
 
-  res.status(202).json({ voiceNoteId: voiceNote.id, status: voiceNote.status });
+    res.status(202).json({ voiceNoteId: voiceNote.id, status: voiceNote.status });
 
-  // Process asynchronously so the tech isn't stuck waiting on-site;
-  // the mobile app polls GET /voice-notes/:id for the result.
-  processVoiceNote(voiceNote.id, stored.storageKey, job.id, job.organizationId, job.clientId, purpose).catch((err) => {
-    console.error(`Voice note ${voiceNote.id} processing failed`, err);
-  });
-});
+    // Process asynchronously so the tech isn't stuck waiting on-site;
+    // the mobile app polls GET /voice-notes/:id for the result.
+    processVoiceNote(voiceNote.id, stored.storageKey, job.id, job.organizationId, job.clientId, purpose).catch((err) => {
+      console.error(`Voice note ${voiceNote.id} processing failed`, err);
+    });
+  },
+);
 
 async function processVoiceNote(
   voiceNoteId: string,
