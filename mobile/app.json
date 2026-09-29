@@ -14,7 +14,6 @@
       "infoPlist": {
         "NSMicrophoneUsageDescription": "We need microphone access so you can record a voice note describing the job you just finished.",
         "NSCameraUsageDescription": "We need camera access so you can photograph the job site for documentation.",
-        "NSPhotoLibraryUsageDescription": "We need photo library access so you can attach an existing photo to job documentation.",
         "NSLocationWhenInUseUsageDescription": "We tag documentation photos with the job site's location as part of the evidence record."
       }
     },
@@ -37,7 +36,8 @@
       ]
     ],
     "extra": {
-      "apiBaseUrl": "http://localhost:4000/api"
+      "apiBaseUrl": "http://localhost:4000/api",
+      "sentryDsn": ""
     }
   }
 }

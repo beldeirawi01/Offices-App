@@ -1,4 +1,5 @@
 import twilio from "twilio";
+import { Prisma } from "@prisma/client";
 import { env } from "../config/env";
 
 let twilioClient: ReturnType<typeof twilio> | null = null;
@@ -13,10 +14,12 @@ function getTwilioClient() {
   return twilioClient;
 }
 
-// Twilio's carrier-level opt-out (replying STOP) is handled automatically for
-// numbers registered on a Messaging Service — no code-side handling needed,
-// but you must complete A2P 10DLC/toll-free registration before sending at
-// volume, and every message must be sent to a client with smsConsent=true.
+// Twilio's carrier-level opt-out (replying STOP) blocks delivery
+// automatically for numbers on a Messaging Service, but doesn't update our
+// own Client.smsConsent — see routes/twilio.routes.ts for the inbound
+// webhook that keeps that in sync. You must also complete A2P 10DLC/
+// toll-free registration before sending at volume, and every message must
+// be sent to a client with smsConsent=true.
 export async function sendSms(params: { to: string; body: string }) {
   const client = getTwilioClient();
   return client.messages.create({ to: params.to, from: env.twilioFromNumber, body: params.body });
@@ -65,7 +68,7 @@ export async function deliverInvoiceToClient(params: {
   clientSmsConsent: boolean;
   invoiceNumber: string;
   pageUrl: string;
-  total: number;
+  total: Prisma.Decimal;
   businessName: string;
 }): Promise<DeliveryResult[]> {
   const results: DeliveryResult[] = [];
@@ -121,7 +124,7 @@ export async function deliverQuoteToClient(params: {
   clientSmsConsent: boolean;
   quoteNumber: string;
   pageUrl: string;
-  total: number;
+  total: Prisma.Decimal;
   businessName: string;
 }): Promise<DeliveryResult[]> {
   const results: DeliveryResult[] = [];
@@ -173,7 +176,7 @@ export async function sendInvoiceReminder(params: {
   clientSmsConsent: boolean;
   invoiceNumber: string;
   pageUrl: string;
-  total: number;
+  total: Prisma.Decimal;
   daysOverdue: number;
   businessName: string;
 }): Promise<DeliveryResult[]> {

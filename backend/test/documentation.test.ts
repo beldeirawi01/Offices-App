@@ -40,6 +40,20 @@ describe("job documentation", () => {
     expect(res.status).toBe(400);
   });
 
+  it("rejects a non-image file uploaded as the photo field", async () => {
+    const owner = await registerOwner();
+    const client = await createClient(owner.token);
+    const jobRes = await createJob(owner.token, client.id);
+
+    const res = await request(app)
+      .post(`/api/jobs/${jobRes.body.id}/documentation`)
+      .set("Authorization", `Bearer ${owner.token}`)
+      .field("stage", "ARRIVAL")
+      .attach("photo", Buffer.from("not a photo"), { filename: "notes.txt", contentType: "text/plain" });
+
+    expect(res.status).toBe(400);
+  });
+
   it("lists documentation entries for a job in chronological order", async () => {
     const owner = await registerOwner();
     const client = await createClient(owner.token);

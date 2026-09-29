@@ -46,3 +46,4 @@ jobs:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/offices_app_test
       - run: npm run lint
       - run: npm test
+      - run: npm run build

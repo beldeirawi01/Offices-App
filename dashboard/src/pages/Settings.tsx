@@ -3,17 +3,32 @@ import { useSearchParams } from "react-router-dom";
 import { api, Organization } from "../api/client";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../components/Toast";
+import { useConfirm } from "../components/ConfirmDialog";
 import { CheckCircleIcon, AlertCircleIcon } from "../components/Icons";
 
+// Common US timezones — covers the target audience (US trades businesses)
+// without dumping the full ~400-entry IANA list into a dropdown.
+const TIMEZONE_OPTIONS = [
+  { value: "America/New_York", label: "Eastern (New York)" },
+  { value: "America/Chicago", label: "Central (Chicago)" },
+  { value: "America/Denver", label: "Mountain (Denver)" },
+  { value: "America/Phoenix", label: "Mountain, no DST (Phoenix)" },
+  { value: "America/Los_Angeles", label: "Pacific (Los Angeles)" },
+  { value: "America/Anchorage", label: "Alaska (Anchorage)" },
+  { value: "Pacific/Honolulu", label: "Hawaii (Honolulu)" },
+];
+
 export default function Settings() {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const toast = useToast();
+  const confirm = useConfirm();
   const [searchParams, setSearchParams] = useSearchParams();
   const isOwner = user?.role === "OWNER";
 
   const [org, setOrg] = useState<Organization | null>(null);
   const [name, setName] = useState("");
   const [taxRatePercent, setTaxRatePercent] = useState("0");
+  const [timezone, setTimezone] = useState("America/New_York");
   const [orgSaving, setOrgSaving] = useState(false);
 
   const [stripeLoading, setStripeLoading] = useState(false);
@@ -31,6 +46,11 @@ export default function Settings() {
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [passwordSuccess, setPasswordSuccess] = useState(false);
 
+  const [exporting, setExporting] = useState(false);
+  const [deletePassword, setDeletePassword] = useState("");
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
   const loadOrg = () => {
     api
       .get<Organization>("/organizations/me")
@@ -38,6 +58,7 @@ export default function Settings() {
         setOrg(res.data);
         setName(res.data.name);
         setTaxRatePercent((res.data.taxRate * 100).toString());
+        setTimezone(res.data.timezone);
         setReviewRequestEnabled(res.data.reviewRequestEnabled);
         setReviewRequestDelayDays(res.data.reviewRequestDelayDays.toString());
         setReviewLinkUrl(res.data.reviewLinkUrl ?? "");
@@ -81,7 +102,7 @@ export default function Settings() {
     e.preventDefault();
     setOrgSaving(true);
     try {
-      await api.put("/organizations/me", { name, taxRatePercent: Number(taxRatePercent) });
+      await api.put("/organizations/me", { name, taxRatePercent: Number(taxRatePercent), timezone });
       toast.success("Business settings saved.");
     } catch (err: any) {
       toast.error(err?.response?.data?.error ?? "Could not save changes");
@@ -165,6 +186,46 @@ export default function Settings() {
       setPasswordError(err?.response?.data?.error ?? "Could not change password");
     } finally {
       setPasswordSaving(false);
+    }
+  };
+
+  const onExportData = async () => {
+    setExporting(true);
+    try {
+      const res = await api.get("/organizations/me/export", { responseType: "blob" });
+      const url = URL.createObjectURL(new Blob([res.data], { type: "application/json" }));
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "jobscribe-data-export.json";
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (err: any) {
+      toast.error(err?.response?.data?.error ?? "Could not export your data");
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const onDeleteAccount = async (e: FormEvent) => {
+    e.preventDefault();
+    setDeleteError(null);
+
+    const ok = await confirm({
+      title: "Delete your account?",
+      message:
+        "This permanently deletes your business's entire Jobscribe account — every client, job, invoice, quote, and recording. There is no undo, and no one (including support) can recover it afterward.",
+      confirmLabel: "Delete everything",
+      danger: true,
+    });
+    if (!ok) return;
+
+    setDeleting(true);
+    try {
+      await api.post("/organizations/me/delete", { password: deletePassword });
+      logout();
+    } catch (err: any) {
+      setDeleteError(err?.response?.data?.error ?? "Could not delete your account");
+      setDeleting(false);
     }
   };
 
@@ -274,8 +335,24 @@ export default function Settings() {
                   onChange={(e) => setTaxRatePercent(e.target.value)}
                 />
               </label>
+              <label>
+                Timezone
+                <select value={timezone} onChange={(e) => setTimezone(e.target.value)}>
+                  {!TIMEZONE_OPTIONS.some((opt) => opt.value === timezone) && (
+                    <option value={timezone}>{timezone}</option>
+                  )}
+                  {TIMEZONE_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
             </div>
-            <p className="muted small">Applied automatically to every new invoice's subtotal.</p>
+            <p className="muted small">
+              Tax is applied automatically to every new invoice's subtotal. Timezone determines what time reminders and
+              review requests are sent — set this to where your business operates.
+            </p>
             <div className="form-actions">
               <button type="submit" disabled={orgSaving}>
                 {orgSaving ? "Saving..." : "Save"}
@@ -420,6 +497,46 @@ export default function Settings() {
             </button>
           </div>
         </form>
+      </section>
+
+      <section className="panel">
+        <h2>Your data</h2>
+        <div className="form-card">
+          <p className="muted small">
+            Download everything Jobscribe has stored for your business — clients, jobs, invoices, quotes, and voice
+            note transcripts — as a JSON file. Photo/audio files themselves aren't included in the download; only
+            their metadata is.
+          </p>
+          <div className="button-row">
+            <button type="button" className="btn-secondary" onClick={onExportData} disabled={exporting}>
+              {exporting ? "Preparing export..." : "Export my data"}
+            </button>
+          </div>
+        </div>
+
+        {isOwner && (
+          <form className="form-card" onSubmit={onDeleteAccount} style={{ marginTop: 16 }}>
+            <h3>Delete account</h3>
+            {deleteError && <div className="error-banner">{deleteError}</div>}
+            <p className="muted small">
+              Permanently deletes your business's entire account and everything in it. This cannot be undone.
+            </p>
+            <label>
+              Confirm your password
+              <input
+                type="password"
+                value={deletePassword}
+                onChange={(e) => setDeletePassword(e.target.value)}
+                required
+              />
+            </label>
+            <div className="form-actions">
+              <button type="submit" className="btn-danger" disabled={deleting || !deletePassword}>
+                {deleting ? "Deleting..." : "Delete my account permanently"}
+              </button>
+            </div>
+          </form>
+        )}
       </section>
     </div>
   );

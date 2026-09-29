@@ -93,6 +93,30 @@ describe("quotes", () => {
     expect(accept.body.status).toBe("ACCEPTED");
   });
 
+  it("refuses to accept/decline a quote sent more than 90 days ago", async () => {
+    const owner = await registerOwner();
+    const client = await createClient(owner.token, { name: "Stale quote client", email: "stalequote@test.com" });
+    const create = await request(app)
+      .post("/api/quotes")
+      .set("Authorization", `Bearer ${owner.token}`)
+      .send({ clientId: client.id, lineItems: [{ description: "X", quantity: 1, unitPrice: 75, kind: "PART" }] });
+    const staleSentAt = new Date(Date.now() - 91 * 24 * 60 * 60 * 1000);
+    const quote = await prisma.quote.update({
+      where: { id: create.body.id },
+      data: { status: "SENT", sentAt: staleSentAt },
+    });
+
+    const accept = await request(app).post(`/api/public/quotes/${quote.publicToken}/accept`);
+    expect(accept.status).toBe(410);
+
+    const decline = await request(app).post(`/api/public/quotes/${quote.publicToken}/decline`);
+    expect(decline.status).toBe(410);
+
+    // Viewing the quote itself (not acting on it) still works past expiry.
+    const view = await request(app).get(`/api/public/quotes/${quote.publicToken}`);
+    expect(view.status).toBe(200);
+  });
+
   it("automatically converts an accepted quote to an invoice when the job is marked complete", async () => {
     const owner = await registerOwner();
     const client = await createClient(owner.token, { name: "Auto convert client" });

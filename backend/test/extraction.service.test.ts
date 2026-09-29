@@ -42,4 +42,56 @@ describe("extractedJobSchema", () => {
     });
     expect(result.lineItems).toEqual([]);
   });
+
+  it("rejects a hallucinated negative unitPrice or quantity on a line item", () => {
+    expect(() =>
+      extractedJobSchema.parse({
+        customerName: "Jane",
+        jobType: null,
+        summary: "Did some work",
+        laborHours: null,
+        laborRate: null,
+        lineItems: [{ description: "Capacitor", quantity: 1, unitPrice: -50, kind: "PART" }],
+        notes: null,
+      }),
+    ).toThrow();
+
+    expect(() =>
+      extractedJobSchema.parse({
+        customerName: "Jane",
+        jobType: null,
+        summary: "Did some work",
+        laborHours: null,
+        laborRate: null,
+        lineItems: [{ description: "Capacitor", quantity: -1, unitPrice: 50, kind: "PART" }],
+        notes: null,
+      }),
+    ).toThrow();
+  });
+
+  it("rejects a negative laborHours or laborRate", () => {
+    expect(() =>
+      extractedJobSchema.parse({
+        customerName: "Jane",
+        jobType: null,
+        summary: "Did some work",
+        laborHours: -2,
+        laborRate: 90,
+        lineItems: [],
+        notes: null,
+      }),
+    ).toThrow();
+
+    expect(() =>
+      extractedJobSchema.parse({
+        customerName: "Jane",
+        jobType: null,
+        summary: "Did some work",
+        laborHours: 2,
+        laborRate: -90,
+        lineItems: [],
+        notes: null,
+      }),
+    ).toThrow();
+  });
 });

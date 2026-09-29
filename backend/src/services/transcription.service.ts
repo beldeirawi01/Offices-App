@@ -9,7 +9,10 @@ function getClient(): OpenAI {
     throw new Error("OPENAI_API_KEY is not configured");
   }
   if (!client) {
-    client = new OpenAI({ apiKey: env.openaiApiKey });
+    // Whisper on a large field recording can take a while; give it room but
+    // don't hang forever, and let the SDK retry transient network/5xx errors
+    // with backoff rather than failing the whole voice note on one blip.
+    client = new OpenAI({ apiKey: env.openaiApiKey, timeout: 120_000, maxRetries: 3 });
   }
   return client;
 }

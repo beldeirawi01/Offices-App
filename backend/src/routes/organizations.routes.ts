@@ -1,9 +1,11 @@
 import { Router } from "express";
+import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { prisma } from "../db/prisma";
 import { requireAuth, requireOwner } from "../middleware/auth";
 import { HttpError } from "../middleware/errorHandler";
 import { env } from "../config/env";
+import { deleteStoredFile } from "../services/storage.service";
 import {
   createConnectedAccount,
   createOnboardingLink,
@@ -12,6 +14,7 @@ import {
   createBillingCustomer,
   createSubscriptionCheckoutSession,
   createBillingPortalLink,
+  cancelSubscription,
 } from "../services/payment.service";
 
 export const organizationsRouter = Router();
@@ -22,6 +25,8 @@ organizationsRouter.get("/me", async (req, res) => {
   res.json(org);
 });
 
+const validTimezones = new Set(Intl.supportedValuesOf("timeZone"));
+
 const updateSchema = z.object({
   name: z.string().min(1).optional(),
   // Stored as a decimal fraction (0.0825 = 8.25%), but the dashboard sends/
@@ -31,6 +36,7 @@ const updateSchema = z.object({
   reviewRequestDelayDays: z.number().int().positive().optional(),
   reviewLinkUrl: z.string().url().optional().nullable(),
   rebookingRemindersEnabled: z.boolean().optional(),
+  timezone: z.string().refine((tz) => validTimezones.has(tz), "Not a recognized timezone").optional(),
 });
 
 organizationsRouter.put("/me", requireOwner, async (req, res) => {
@@ -44,6 +50,7 @@ organizationsRouter.put("/me", requireOwner, async (req, res) => {
       reviewRequestDelayDays: body.reviewRequestDelayDays,
       reviewLinkUrl: body.reviewLinkUrl,
       rebookingRemindersEnabled: body.rebookingRemindersEnabled,
+      timezone: body.timezone,
     },
   });
   res.json(org);
@@ -129,4 +136,114 @@ organizationsRouter.get("/me/subscription/portal", requireOwner, async (req, res
 
   const url = await createBillingPortalLink(org.stripeCustomerId, `${env.appBaseUrl}/settings`);
   res.json({ url });
+});
+
+// A full export of everything this business has stored in Jobscribe — the
+// "right to access" half of a GDPR-style data request. Deliberately excludes
+// the actual photo/audio binary content (storage keys are included as
+// metadata, but downloading a multi-megabyte JSON blob with base64 media
+// embedded isn't a reasonable default); an owner who needs the raw files
+// should be pointed at the documentation photo endpoint / their S3 bucket.
+organizationsRouter.get("/me/export", requireOwner, async (req, res) => {
+  const organizationId = req.auth!.organizationId;
+
+  const [organization, users, clients, jobs] = await Promise.all([
+    prisma.organization.findUniqueOrThrow({ where: { id: organizationId } }),
+    prisma.user.findMany({
+      where: { organizationId },
+      select: { id: true, name: true, email: true, role: true, phone: true, createdAt: true },
+    }),
+    prisma.client.findMany({ where: { organizationId } }),
+    prisma.job.findMany({
+      where: { organizationId },
+      include: {
+        client: { select: { id: true, name: true } },
+        assignedTech: { select: { id: true, name: true } },
+        voiceNotes: true,
+        documentation: true,
+        invoice: { include: { lineItems: true, payments: true, deliveries: true } },
+        quote: { include: { lineItems: true, deliveries: true } },
+      },
+    }),
+  ]);
+
+  res.setHeader("Content-Disposition", `attachment; filename="jobscribe-export-${organizationId}.json"`);
+  res.json({ exportedAt: new Date().toISOString(), organization, users, clients, jobs });
+});
+
+const deleteAccountSchema = z.object({ password: z.string().min(1) });
+
+// Permanently deletes this business's account and every row of data it
+// owns — the "right to erasure" half of a GDPR-style request. Requires the
+// owner's current password as confirmation, same pattern as changing a
+// password, since there's no more destructive action in the whole app.
+// Existing JWTs for this org become inert the moment this completes (every
+// row they could reference is gone), but aren't individually revoked —
+// there's no server-side session store to revoke them from.
+organizationsRouter.post("/me/delete", requireOwner, async (req, res) => {
+  const body = deleteAccountSchema.parse(req.body);
+  const organizationId = req.auth!.organizationId;
+
+  const owner = await prisma.user.findUniqueOrThrow({ where: { id: req.auth!.userId } });
+  const valid = await bcrypt.compare(body.password, owner.passwordHash);
+  if (!valid) throw new HttpError(401, "Password is incorrect");
+
+  const org = await prisma.organization.findUniqueOrThrow({ where: { id: organizationId } });
+
+  // Best-effort — Stripe being unreachable shouldn't strand an owner unable
+  // to delete their own data; they can still cancel from their card/bank
+  // statement if this fails.
+  if (org.stripeSubscriptionId) {
+    await cancelSubscription(org.stripeSubscriptionId).catch((err) => {
+      console.error(`Failed to cancel Stripe subscription for org ${organizationId} during account deletion`, err);
+    });
+  }
+
+  const jobs = await prisma.job.findMany({ where: { organizationId }, select: { id: true } });
+  const jobIds = jobs.map((j) => j.id);
+
+  const [voiceNotes, documentation] = await Promise.all([
+    prisma.voiceNote.findMany({ where: { jobId: { in: jobIds } }, select: { audioUrl: true, audioDeleted: true } }),
+    prisma.jobDocumentation.findMany({
+      where: { jobId: { in: jobIds } },
+      select: { photoStorageKey: true, audioStorageKey: true },
+    }),
+  ]);
+
+  // Delete the underlying files before the DB rows that reference them.
+  // Best-effort and logged rather than fatal — an unreachable S3 shouldn't
+  // block an owner from deleting their own account data; any file left
+  // behind after this is an orphan with nothing in our database pointing at
+  // it, not exposed data.
+  await Promise.all([
+    ...voiceNotes
+      .filter((v) => !v.audioDeleted)
+      .map((v) => deleteStoredFile(v.audioUrl).catch((err) => console.error("Failed to delete voice note audio during account deletion", err))),
+    ...documentation.map((d) =>
+      deleteStoredFile(d.photoStorageKey).catch((err) => console.error("Failed to delete job photo during account deletion", err)),
+    ),
+    ...documentation
+      .filter((d): d is typeof d & { audioStorageKey: string } => d.audioStorageKey != null)
+      .map((d) => deleteStoredFile(d.audioStorageKey).catch((err) => console.error("Failed to delete documentation audio during account deletion", err))),
+  ]);
+
+  // Deletion order matters: children before the parents they have a
+  // (non-cascading) foreign key into, so nothing hits a constraint
+  // violation partway through. LineItem/QuoteLineItem aren't listed here —
+  // they cascade automatically when their Invoice/Quote is deleted.
+  await prisma.$transaction([
+    prisma.payment.deleteMany({ where: { invoice: { organizationId } } }),
+    prisma.invoiceDelivery.deleteMany({ where: { invoice: { organizationId } } }),
+    prisma.quoteDelivery.deleteMany({ where: { quote: { organizationId } } }),
+    prisma.voiceNote.deleteMany({ where: { jobId: { in: jobIds } } }),
+    prisma.jobDocumentation.deleteMany({ where: { jobId: { in: jobIds } } }),
+    prisma.invoice.deleteMany({ where: { organizationId } }),
+    prisma.quote.deleteMany({ where: { organizationId } }),
+    prisma.job.deleteMany({ where: { organizationId } }),
+    prisma.client.deleteMany({ where: { organizationId } }),
+    prisma.user.deleteMany({ where: { organizationId } }),
+    prisma.organization.delete({ where: { id: organizationId } }),
+  ]);
+
+  res.status(204).send();
 });

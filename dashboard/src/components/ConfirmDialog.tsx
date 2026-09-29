@@ -34,8 +34,8 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
       {children}
       {pending && (
         <div className="modal-overlay" onClick={() => close(false)}>
-          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
-            <h2>{pending.title}</h2>
+          <div className="modal-card" role="dialog" aria-modal="true" aria-labelledby="confirm-dialog-title" onClick={(e) => e.stopPropagation()}>
+            <h2 id="confirm-dialog-title">{pending.title}</h2>
             <p className="muted">{pending.message}</p>
             <div className="modal-actions">
               <button type="button" className="btn-secondary" onClick={() => close(false)}>

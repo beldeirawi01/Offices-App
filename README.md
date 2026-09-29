@@ -100,12 +100,24 @@ npm test
 
 CI (`.github/workflows/backend-tests.yml`) runs this automatically against a fresh Postgres service container on every push/PR that touches `backend/`.
 
+The dashboard has a Playwright end-to-end suite (`dashboard/e2e/`) that drives the real UI against a real backend + an isolated `offices_app_e2e` database (never dev or test data) through the core value chain: register a business, add a client, schedule a job, create and pay an invoice.
+
+```bash
+createdb offices_app_e2e
+DATABASE_URL="postgresql://postgres:postgres@localhost:5432/offices_app_e2e" npx prisma migrate deploy --schema backend/prisma/schema.prisma
+cd dashboard
+npm run test:e2e
+```
+
+The mobile app has a Jest + React Native Testing Library suite (`mobile/__tests__/`) covering the login handoff between `LoginScreen` and `AuthContext` that every other screen depends on — not a device/simulator E2E run, since no emulator is assumed to be available. Run with `cd mobile && npm test`. Both suites run in CI (`dashboard-ci.yml`, `mobile-ci.yml`) on every push/PR that touches their respective app.
+
 ## What's implemented vs. what still needs your action before launch
 
 **Done in code:**
 - Stripe Connect onboarding — each business connects its own bank account and gets paid directly, not through a shared platform account (see **Stripe Connect** above)
 - Multi-tenant isolation checks on jobs/clients (an org can't reference another org's data)
 - Rate limiting (auth, voice uploads, public endpoints) and a locked-down CORS allowlist for production
+- Per-organization monthly cap on voice-note + documentation-with-audio uploads (`MAX_VOICE_UPLOADS_PER_ORG_PER_MONTH`, defaults to 1000) — bounds worst-case Whisper/Claude spend from one heavy or runaway org without touching a photo-only documentation entry, which costs nothing to transcribe
 - Pagination and search on clients/jobs/invoices lists
 - Overdue invoice detection + automated payment reminders (background cron)
 - S3-compatible voice note storage (falls back to local disk only in dev)
@@ -118,21 +130,38 @@ CI (`.github/workflows/backend-tests.yml`) runs this automatically against a fre
 - Job detail page tying together a job's info, assigned tech, voice notes/transcript, and invoice in one view
 - Edit/cancel flows for clients, jobs, and invoices in the dashboard
 - "Start an unscheduled job" flow in the mobile app for walk-ins
-- Error tracking wiring (Sentry, optional via `SENTRY_DSN`)
+- Error tracking wiring in all three apps (Sentry, optional via `SENTRY_DSN` on the backend, `VITE_SENTRY_DSN` on the dashboard, and the `sentryDsn` field under `expo.extra` in `mobile/app.json`) — a no-op everywhere it's left blank
 - A real backend test suite + CI
 - Voice-first quotes — an on-arrival estimate that the client accepts/declines, and auto-converts to an invoice when the job is marked complete (`backend/src/services/quote.service.ts`)
 - Multi-note job timeline — a job can collect several voice notes (an arrival quote, then one or more completion notes); every completion note's line items fold into the one draft invoice instead of only the first note winning (`invoice.service.ts#mergeExtractionIntoInvoice`), and the mobile job detail screen shows the full timeline
 - Automatic follow-up: a configurable-delay review request after an invoice is paid, and a rebooking reminder once a job's set recurrence interval (e.g. every 6 months for an HVAC tune-up) has passed — both are org-wide toggles in Settings with a per-client opt-out
 - Voice-and-photo job documentation — a photo + optional voice note pair captured at arrival/mid-job/completion, geotagged when location permission is granted, kept as standalone liability/warranty evidence separate from the invoice-facing job notes, with an owner-only toggle to feature a photo on the client invoice
 - Flat $29/month subscription billing — no per-seat pricing or tiers; a 14-day self-serve trial, then a single Stripe Checkout flow and hosted Billing Portal, with the whole app gated behind `402 Payment Required` once the trial or subscription lapses (see **Subscription billing** above)
+- Money stored as Postgres `Decimal(12,2)`, never `Float` — invoice/quote/line-item/payment amounts are computed with exact base-10 arithmetic (`backend/src/utils/money.ts`) instead of binary floating point, so a run of small charges can't silently drift off by fractions of a cent. Serializes back to a plain JSON number for the dashboard/mobile exactly as before (`Prisma.Decimal.prototype.toJSON` patched once in `backend/src/db/prisma.ts`), so this needed no frontend changes.
+- Upload magic-byte checking (`backend/src/utils/fileSignature.ts`) — the declared multipart Content-Type is client-controlled and easy to spoof, so voice/photo uploads are also checked against their actual file signature on disk before being accepted.
+- Sequential, per-business invoice/quote numbers (`INV-000001`, `QTE-000001`, ...) instead of a timestamp+random string, via an atomic per-organization counter (`Organization.invoiceSequence`/`quoteSequence`) — see `invoice.service.ts`/`quote.service.ts`.
+- Voice note audio is deleted after the pipeline successfully drafts a quote/invoice from it (the transcript is kept as the durable record; nothing in the app ever plays the audio back). Job-documentation audio is deliberately kept — it's liability/warranty evidence, not pipeline input — see the `audioDeleted` field comment on `VoiceNote` in `schema.prisma`.
+- A GDPR-style data export/delete path: Settings → "Your data" lets an owner download a full JSON export of their business's data, or permanently delete the account and everything under it (password-confirmed, cancels the Stripe subscription, deletes stored files) — see `GET /api/organizations/me/export` and `POST /api/organizations/me/delete`.
 
 **Needs your action, not more code:**
 - **Accounts/credentials**: production OpenAI, Anthropic, Twilio, Brevo, Stripe (with **Connect enabled**, plus the second Connect-scoped webhook endpoint, plus a real $29/month Price for subscription billing — see **Stripe Connect** and **Subscription billing** above), and an S3-compatible bucket (AWS S3, Cloudflare R2, Backblaze B2) — this repo only has the integration code, not the accounts.
 - **Legal review**: `dashboard/src/pages/Legal.tsx` has Terms of Service and Privacy Policy *drafts* — a lawyer needs to review and finalize these (jurisdiction, actual data practices, liability language) before they're relied upon.
-- **Twilio compliance**: complete A2P 10DLC/toll-free registration before sending SMS at volume; the app already gates SMS on a `smsConsent` flag per client, but the registration itself is done in your Twilio console.
+- **Twilio compliance**: complete A2P 10DLC/toll-free registration before sending SMS at volume; the app already gates SMS on a `smsConsent` flag per client, but the registration itself is done in your Twilio console. Also point the number's "A message comes in" webhook at `<API_PUBLIC_URL>/api/webhooks/twilio/sms` (set `API_PUBLIC_URL` to this backend's own public URL) — a client replying STOP/START is verified and flips their `smsConsent` here, not just at the carrier level, so the dashboard reflects reality instead of still showing them as opted in.
 - **Deployment**: `render.yaml` (Render Blueprint) and `backend/Dockerfile` are ready to deploy from — you still need to connect your own Render/Railway account, and fill in the `sync: false` env vars in the dashboard after first deploy.
 - **App store submission**: `mobile/` needs an Apple Developer account and Google Play Console account, plus an EAS Build + submission run — code is ready, publishing is a manual process only you can complete.
-- **Backups**: set up automated Postgres backups on whatever host you choose (most managed Postgres offerings include this — verify it's actually turned on).
+- **Backups**: `backend/scripts/backup-db.sh` / `restore-db.sh` and `backend/docs/BACKUP_RESTORE.md` cover the mechanism (and a restore has been tested end to end), but *scheduling* it is a hosting decision — set up automated Postgres backups on whatever host you choose (most managed Postgres offerings include this — verify it's actually turned on).
+
+## Known gaps vs. established competitors
+
+Where Jobscribe is behind, or only at parity, against existing trades-software products:
+
+- Voice invoicing is now table stakes — Housecall Pro has it, and there are dozens of cheap App Store clones.
+- No dispatch, calendar, route optimization, or pricebook — these are the core of the full "trades suite" products.
+- No QuickBooks sync — Housecall Pro integrates with QuickBooks Online, and small trades shops often need this. ([Housecall Pro](https://www.housecallpro.com/llm-info/))
+- No e-signatures or change orders — Kvota has both.
+- English only — Kvota is bilingual, and Spanish matters in many trades crews.
+- Transcription is server-side — the offline queue uploads later once there's signal, whereas VoicePrice runs transcription fully on-device.
+- No in-person payments, online booking, or AI receptionist.
 
 ## Hosting
 

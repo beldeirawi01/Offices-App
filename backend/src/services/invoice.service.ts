@@ -1,13 +1,7 @@
+import { Prisma } from "@prisma/client";
 import { prisma } from "../db/prisma";
 import { ExtractedJob } from "./extraction.service";
-
-function generateInvoiceNumber(): string {
-  const stamp = Date.now().toString(36).toUpperCase();
-  const rand = Math.floor(Math.random() * 1000)
-    .toString()
-    .padStart(3, "0");
-  return `INV-${stamp}-${rand}`;
-}
+import { lineItemAmount, sumMoney, calculateTax } from "../utils/money";
 
 export interface DraftLineItem {
   description: string;
@@ -34,18 +28,27 @@ export async function createInvoiceFromLineItems(params: {
 }) {
   const { organizationId, clientId, jobId, lineItems, laborHours, laborRate, notes, dueDate } = params;
 
-  const org = await prisma.organization.findUniqueOrThrow({ where: { id: organizationId } });
+  // Atomically claims the next sequence number and reads the org's tax rate
+  // in one round trip — `{ increment: 1 }` compiles to a single
+  // `UPDATE ... SET "invoiceSequence" = "invoiceSequence" + 1`, so concurrent
+  // invoice creation for the same org can't collide on the same number.
+  const org = await prisma.organization.update({
+    where: { id: organizationId },
+    data: { invoiceSequence: { increment: 1 } },
+  });
+  const invoiceNumber = `INV-${String(org.invoiceSequence).padStart(6, "0")}`;
 
-  const subtotal = lineItems.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
-  const tax = subtotal * org.taxRate;
-  const total = subtotal + tax;
+  const lineItemAmounts = lineItems.map((item) => lineItemAmount(item.quantity, item.unitPrice));
+  const subtotal = sumMoney(lineItemAmounts);
+  const tax = calculateTax(subtotal, org.taxRate);
+  const total = subtotal.plus(tax);
 
   return prisma.invoice.create({
     data: {
       organizationId,
       clientId,
       jobId: jobId ?? undefined,
-      invoiceNumber: generateInvoiceNumber(),
+      invoiceNumber,
       status: "DRAFT",
       laborHours: laborHours ?? undefined,
       laborRate: laborRate ?? undefined,
@@ -55,11 +58,11 @@ export async function createInvoiceFromLineItems(params: {
       notes: notes ?? undefined,
       dueDate: dueDate ?? undefined,
       lineItems: {
-        create: lineItems.map((item) => ({
+        create: lineItems.map((item, i) => ({
           description: item.description,
           quantity: item.quantity,
           unitPrice: item.unitPrice,
-          amount: item.quantity * item.unitPrice,
+          amount: lineItemAmounts[i],
           kind: item.kind,
         })),
       },
@@ -78,7 +81,7 @@ function buildLineItemsFromExtraction(extracted: ExtractedJob): DraftLineItem[] 
 
   const laborAmount =
     !alreadyHasLaborLineItem && extracted.laborHours != null && extracted.laborRate != null
-      ? extracted.laborHours * extracted.laborRate
+      ? new Prisma.Decimal(extracted.laborHours).times(extracted.laborRate).toDecimalPlaces(2).toNumber()
       : 0;
 
   if (laborAmount > 0) {
@@ -135,16 +138,16 @@ export async function mergeExtractionIntoInvoice(invoiceId: string, extracted: E
       description: item.description,
       quantity: item.quantity,
       unitPrice: item.unitPrice,
-      amount: item.quantity * item.unitPrice,
+      amount: lineItemAmount(item.quantity, item.unitPrice),
       kind: item.kind,
     })),
   });
 
   const org = await prisma.organization.findUniqueOrThrow({ where: { id: invoice.organizationId } });
   const allLineItems = await prisma.lineItem.findMany({ where: { invoiceId: invoice.id } });
-  const subtotal = allLineItems.reduce((sum, item) => sum + item.amount, 0);
-  const tax = subtotal * org.taxRate;
-  const total = subtotal + tax;
+  const subtotal = sumMoney(allLineItems.map((item) => item.amount));
+  const tax = calculateTax(subtotal, org.taxRate);
+  const total = subtotal.plus(tax);
   const notes = [invoice.notes, extracted.notes ?? extracted.summary].filter(Boolean).join("\n\n");
 
   return prisma.invoice.update({

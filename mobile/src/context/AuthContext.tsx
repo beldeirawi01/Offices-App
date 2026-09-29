@@ -1,6 +1,6 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { createContext, ReactNode, useContext, useEffect, useState } from "react";
 import { api } from "../api/client";
+import { getSecureItem, setSecureItem, deleteSecureItems } from "../services/secureStorage";
 
 interface User {
   id: string;
@@ -23,7 +23,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    AsyncStorage.getItem("user")
+    getSecureItem("user")
       .then((raw) => {
         if (raw) {
           try {
@@ -31,26 +31,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           } catch {
             // Corrupted/stale stored value (e.g. from an old app version) —
             // fall back to logged-out rather than getting stuck here forever.
-            AsyncStorage.multiRemove(["token", "user"]).catch(() => {});
+            deleteSecureItems(["token", "user"]).catch(() => {});
           }
         }
       })
       .catch(() => {
-        // AsyncStorage itself failed to read — treat as logged-out instead of
-        // leaving the whole app stuck on its startup spinner indefinitely.
+        // Secure storage itself failed to read — treat as logged-out instead
+        // of leaving the whole app stuck on its startup spinner indefinitely.
       })
       .finally(() => setLoading(false));
   }, []);
 
   const login = async (email: string, password: string) => {
     const { data } = await api.post("/auth/login", { email, password });
-    await AsyncStorage.setItem("token", data.token);
-    await AsyncStorage.setItem("user", JSON.stringify(data.user));
+    await setSecureItem("token", data.token);
+    await setSecureItem("user", JSON.stringify(data.user));
     setUser(data.user);
   };
 
   const logout = async () => {
-    await AsyncStorage.multiRemove(["token", "user"]);
+    await deleteSecureItems(["token", "user"]);
     setUser(null);
   };
 

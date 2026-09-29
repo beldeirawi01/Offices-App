@@ -1,0 +1,36 @@
+name: Mobile CI
+
+on:
+  push:
+    paths:
+      - "mobile/**"
+      - ".github/workflows/mobile-ci.yml"
+  pull_request:
+    paths:
+      - "mobile/**"
+
+jobs:
+  typecheck:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+
+      - run: npm ci
+      # Typecheck only — a real build needs an EAS account/credentials this
+      # repo doesn't have. This still catches most regressions (bad imports,
+      # type errors, API/type-shape mismatches across screens and services).
+      - run: npm run lint
+      # Jest + React Native Testing Library, not a device/simulator E2E run —
+      # there's no emulator available in CI here. Covers the login handoff
+      # between LoginScreen and AuthContext that every other screen depends on.
+      - run: npm test

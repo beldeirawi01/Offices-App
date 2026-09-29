@@ -1,5 +1,12 @@
 import dotenv from "dotenv";
-dotenv.config({ path: ".env.test" });
+// override: true is required here — importing "../src/db/prisma" below pulls
+// in src/config/env.ts, whose own bare dotenv.config() (loading plain .env)
+// actually runs before this file's *later* statements due to how module
+// evaluation order works, even though this call appears first in the
+// source. Without override, an already-set key (e.g. DATABASE_URL, defined
+// even as an empty string) silently wins over .env.test — which meant the
+// whole suite was truncating tables in offices_app_dev, not a test database.
+dotenv.config({ path: ".env.test", override: true });
 
 import { beforeEach } from "vitest";
 import { prisma } from "../src/db/prisma";

@@ -6,6 +6,7 @@ import { z } from "zod";
 import { prisma } from "../db/prisma";
 import { requireAuth, requireOwner } from "../middleware/auth";
 import { requireActiveSubscription } from "../middleware/subscription";
+import { assertWithinVoiceUsageCap } from "../middleware/voiceUsageCap";
 import { HttpError } from "../middleware/errorHandler";
 import { transcribeAudio } from "../services/transcription.service";
 import {
@@ -17,6 +18,7 @@ import {
   localPhotoUploadDir,
   localUploadDir,
 } from "../services/storage.service";
+import { looksLikeAudio, looksLikeImage } from "../utils/fileSignature";
 
 export const documentationRouter = Router();
 // NOTE: mounted at bare "/api" in app.ts, same reasoning as voiceRouter — its
@@ -35,6 +37,15 @@ const upload = multer({
     },
   }),
   limits: { fileSize: 25 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    if (file.fieldname === "photo" && !file.mimetype.startsWith("image/")) {
+      return cb(new HttpError(400, "Documentation photo must be an image file"));
+    }
+    if (file.fieldname === "audio" && !file.mimetype.startsWith("audio/")) {
+      return cb(new HttpError(400, "Documentation audio must be an audio recording"));
+    }
+    cb(null, true);
+  },
 });
 
 const stageSchema = z.enum(["ARRIVAL", "MID_JOB", "COMPLETION"]);
@@ -56,6 +67,15 @@ documentationRouter.post(
     const files = req.files as { photo?: Express.Multer.File[]; audio?: Express.Multer.File[] } | undefined;
     const photoFile = files?.photo?.[0];
     if (!photoFile) throw new HttpError(400, "Missing photo file field 'photo'");
+    const audioFile = files?.audio?.[0];
+
+    // fileFilter above only saw the client-declared Content-Type, which is
+    // easy to spoof — this checks what was actually written to disk.
+    if (!looksLikeImage(photoFile.path) || (audioFile && !looksLikeAudio(audioFile.path))) {
+      fs.unlink(photoFile.path, () => {});
+      if (audioFile) fs.unlink(audioFile.path, () => {});
+      throw new HttpError(400, "Uploaded file does not look like a valid photo or audio recording");
+    }
 
     const stage = stageSchema.parse(req.body.stage);
     const latitude = req.body.latitude != null && req.body.latitude !== "" ? Number(req.body.latitude) : undefined;
@@ -64,9 +84,15 @@ documentationRouter.post(
     const job = await prisma.job.findFirst({ where: { id: req.params.jobId, organizationId: req.auth!.organizationId } });
     if (!job) throw new HttpError(404, "Job not found");
 
-    const storedPhoto = await storeJobPhoto(photoFile.path, photoFile.filename);
-    const audioFile = files?.audio?.[0];
-    const storedAudio = audioFile ? await storeVoiceNoteAudio(audioFile.path, audioFile.filename) : null;
+    // Only checked when this request actually includes audio — a photo-only
+    // documentation entry costs nothing to transcribe and shouldn't be
+    // blocked by an org's voice-note cap.
+    if (audioFile) {
+      await assertWithinVoiceUsageCap(req.auth!.organizationId);
+    }
+
+    const storedPhoto = await storeJobPhoto(photoFile.path, photoFile.filename, photoFile.mimetype);
+    const storedAudio = audioFile ? await storeVoiceNoteAudio(audioFile.path, audioFile.filename, audioFile.mimetype) : null;
 
     const doc = await prisma.jobDocumentation.create({
       data: {

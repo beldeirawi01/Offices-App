@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { registerOwner, createClient, createJob, prisma } from "./helpers";
-import { createDraftInvoiceFromExtraction, mergeExtractionIntoInvoice } from "../src/services/invoice.service";
+import { createDraftInvoiceFromExtraction, createInvoiceFromLineItems, mergeExtractionIntoInvoice } from "../src/services/invoice.service";
+import { createQuoteFromLineItems } from "../src/services/quote.service";
 import type { ExtractedJob } from "../src/services/extraction.service";
 
 describe("createDraftInvoiceFromExtraction", () => {
@@ -29,8 +30,8 @@ describe("createDraftInvoiceFromExtraction", () => {
 
     const laborItems = invoice.lineItems.filter((i) => i.kind === "LABOR");
     expect(laborItems).toHaveLength(1);
-    expect(laborItems[0].amount).toBe(180);
-    expect(invoice.subtotal).toBe(15 + 180);
+    expect(laborItems[0].amount.toNumber()).toBe(180);
+    expect(invoice.subtotal.toNumber()).toBe(15 + 180);
   });
 
   it("does not double-bill labor when extraction already itemized a LABOR line item", async () => {
@@ -59,7 +60,7 @@ describe("createDraftInvoiceFromExtraction", () => {
 
     const laborItems = invoice.lineItems.filter((i) => i.kind === "LABOR");
     expect(laborItems).toHaveLength(1);
-    expect(invoice.subtotal).toBe(180);
+    expect(invoice.subtotal.toNumber()).toBe(180);
   });
 });
 
@@ -136,5 +137,46 @@ describe("mergeExtractionIntoInvoice", () => {
 
     const lineItems = await prisma.lineItem.findMany({ where: { invoiceId: invoice.id } });
     expect(lineItems).toHaveLength(1);
+  });
+});
+
+describe("sequential invoice/quote numbers", () => {
+  it("assigns increasing per-organization invoice numbers instead of a timestamp+random string", async () => {
+    const owner = await registerOwner();
+    const client = await createClient(owner.token);
+    const lineItems = [{ description: "Part", quantity: 1, unitPrice: 10, kind: "PART" as const }];
+
+    const first = await createInvoiceFromLineItems({ organizationId: owner.user.organizationId, clientId: client.id, lineItems });
+    const second = await createInvoiceFromLineItems({ organizationId: owner.user.organizationId, clientId: client.id, lineItems });
+
+    expect(first.invoiceNumber).toBe("INV-000001");
+    expect(second.invoiceNumber).toBe("INV-000002");
+  });
+
+  it("keeps each organization's invoice sequence independent of every other org's", async () => {
+    const ownerA = await registerOwner();
+    const clientA = await createClient(ownerA.token);
+    const ownerB = await registerOwner();
+    const clientB = await createClient(ownerB.token);
+    const lineItems = [{ description: "Part", quantity: 1, unitPrice: 10, kind: "PART" as const }];
+
+    await createInvoiceFromLineItems({ organizationId: ownerA.user.organizationId, clientId: clientA.id, lineItems });
+    const secondForA = await createInvoiceFromLineItems({ organizationId: ownerA.user.organizationId, clientId: clientA.id, lineItems });
+    const firstForB = await createInvoiceFromLineItems({ organizationId: ownerB.user.organizationId, clientId: clientB.id, lineItems });
+
+    expect(secondForA.invoiceNumber).toBe("INV-000002");
+    expect(firstForB.invoiceNumber).toBe("INV-000001");
+  });
+
+  it("assigns increasing per-organization quote numbers on the same pattern", async () => {
+    const owner = await registerOwner();
+    const client = await createClient(owner.token);
+    const lineItems = [{ description: "Part", quantity: 1, unitPrice: 10, kind: "PART" as const }];
+
+    const first = await createQuoteFromLineItems({ organizationId: owner.user.organizationId, clientId: client.id, lineItems });
+    const second = await createQuoteFromLineItems({ organizationId: owner.user.organizationId, clientId: client.id, lineItems });
+
+    expect(first.quoteNumber).toBe("QTE-000001");
+    expect(second.quoteNumber).toBe("QTE-000002");
   });
 });

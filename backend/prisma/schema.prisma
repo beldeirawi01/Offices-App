@@ -67,6 +67,10 @@ model Organization {
   // Sales tax rate as a decimal fraction (e.g. 0.0825 for 8.25%), applied to
   // every invoice's subtotal. Owner-configurable from Settings.
   taxRate   Float    @default(0)
+  // IANA timezone (e.g. "America/Chicago") this org operates in. Scheduled
+  // reminders/review requests are sent based on the local hour here, not the
+  // server's clock, so a client in Arizona isn't texted at 6am.
+  timezone  String   @default("America/New_York")
 
   // Stripe Connect — each business gets its own connected account so client
   // payments settle to their bank account, not ours. Populated once the
@@ -97,6 +101,16 @@ model Organization {
   stripeSubscriptionId         String?
   trialEndsAt                  DateTime?
   subscriptionCurrentPeriodEnd DateTime?
+
+  // Sequential, per-business invoice/quote numbers (INV-000001, QTE-000001,
+  // ...) rather than a timestamp+random string — trades are used to
+  // sequential paper invoice books and expect gaps to mean something.
+  // Incremented via an atomic `UPDATE ... SET x = x + 1 RETURNING x`
+  // (Prisma's `{ increment: 1 }`), so two invoices created at the same
+  // instant still get distinct numbers — Postgres serializes concurrent
+  // updates to the same row instead of losing one.
+  invoiceSequence Int @default(0)
+  quoteSequence   Int @default(0)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -192,8 +206,21 @@ model VoiceNote {
   job            Job      @relation(fields: [jobId], references: [id])
   jobId          String
   audioUrl       String
+  // Once the pipeline successfully reaches EXTRACTED (a quote/invoice has
+  // been drafted from it), the audio file itself is deleted — the transcript
+  // above is kept as the durable record, but there's no ongoing reason to
+  // keep the client's raw recording once it's been turned into structured
+  // billing data (nothing in the app ever plays it back). Left in place on
+  // FAILED so a failed extraction can still be retried/debugged from the
+  // original audio. `audioUrl` is kept as a historical reference even after
+  // deletion (the key it WAS at), not re-resolvable once audioDeleted is true.
+  audioDeleted   Boolean  @default(false)
   transcript     String?
   extractedJson  Json?
+  // Claude's raw text response, before JSON parsing/validation — kept even
+  // when extraction fails so a bad/hallucinated result can be debugged from
+  // what the model actually said.
+  rawExtraction  String?
   status         String   @default("UPLOADED") // UPLOADED, TRANSCRIBING, TRANSCRIBED, EXTRACTING, EXTRACTED, FAILED
   errorMessage   String?
   // QUOTE (pre-job estimate, spoken on arrival) or INVOICE (post-job actuals,
@@ -238,17 +265,26 @@ model Invoice {
   clientId       String
   job            Job?          @relation(fields: [jobId], references: [id])
   jobId          String?       @unique
-  invoiceNumber  String        @unique
+  // Unique per-organization (not globally) — two different businesses both
+  // legitimately start at INV-000001, so the constraint has to include
+  // organizationId or the second business's first invoice would collide
+  // with the first's.
+  invoiceNumber  String
   // Unguessable token used to build the client-facing invoice/payment link,
   // so clients can view and pay without an account and without exposing the
-  // sequential/internal invoice id.
-  publicToken    String        @unique @default(cuid())
+  // sequential/internal invoice id. A UUID (not cuid) deliberately — cuid
+  // embeds a timestamp and is optimized for sortability, not unguessability.
+  publicToken    String        @unique @default(uuid())
   status         InvoiceStatus @default(DRAFT)
   laborHours     Float?
-  laborRate      Float?
-  subtotal       Float         @default(0)
-  tax            Float         @default(0)
-  total          Float         @default(0)
+  // Money fields are Decimal (exact, base-10), never Float — a client
+  // shouldn't see $149.9800000000001 because of binary floating-point
+  // rounding. Serialized back to a plain JSON number for API responses via
+  // the global Decimal.prototype.toJSON patch in db/prisma.ts.
+  laborRate      Decimal?      @db.Decimal(12, 2)
+  subtotal       Decimal       @default(0) @db.Decimal(12, 2)
+  tax            Decimal       @default(0) @db.Decimal(12, 2)
+  total          Decimal       @default(0) @db.Decimal(12, 2)
   notes          String?
   dueDate        DateTime?
   sentAt         DateTime?
@@ -264,6 +300,7 @@ model Invoice {
   payments  Payment[]
   deliveries InvoiceDelivery[]
 
+  @@unique([organizationId, invoiceNumber])
   @@index([organizationId])
   @@index([clientId])
 }
@@ -274,8 +311,8 @@ model LineItem {
   invoiceId   String
   description String
   quantity    Float    @default(1)
-  unitPrice   Float
-  amount      Float
+  unitPrice   Decimal  @db.Decimal(12, 2)
+  amount      Decimal  @db.Decimal(12, 2)
   kind        String   @default("PART") // PART or LABOR
   createdAt   DateTime @default(now())
 
@@ -290,16 +327,17 @@ model Quote {
   clientId       String
   job            Job?         @relation(fields: [jobId], references: [id])
   jobId          String?      @unique
-  quoteNumber    String       @unique
+  // Unique per-organization, not globally — see Invoice.invoiceNumber.
+  quoteNumber    String
   // Unguessable token for the client-facing quote page (view + accept/decline),
   // same pattern as Invoice.publicToken.
-  publicToken    String       @unique @default(cuid())
+  publicToken    String       @unique @default(uuid())
   status         QuoteStatus  @default(DRAFT)
   laborHours     Float?
-  laborRate      Float?
-  subtotal       Float        @default(0)
-  tax            Float        @default(0)
-  total          Float        @default(0)
+  laborRate      Decimal?     @db.Decimal(12, 2)
+  subtotal       Decimal      @default(0) @db.Decimal(12, 2)
+  tax            Decimal      @default(0) @db.Decimal(12, 2)
+  total          Decimal      @default(0) @db.Decimal(12, 2)
   notes          String?
   sentAt         DateTime?
   respondedAt    DateTime?
@@ -312,6 +350,7 @@ model Quote {
   lineItems  QuoteLineItem[]
   deliveries QuoteDelivery[]
 
+  @@unique([organizationId, quoteNumber])
   @@index([organizationId])
   @@index([clientId])
 }
@@ -322,8 +361,8 @@ model QuoteLineItem {
   quoteId     String
   description String
   quantity    Float    @default(1)
-  unitPrice   Float
-  amount      Float
+  unitPrice   Decimal  @db.Decimal(12, 2)
+  amount      Decimal  @db.Decimal(12, 2)
   kind        String   @default("PART") // PART or LABOR
   createdAt   DateTime @default(now())
 
@@ -347,7 +386,7 @@ model Payment {
   id              String        @id @default(cuid())
   invoice         Invoice       @relation(fields: [invoiceId], references: [id])
   invoiceId       String
-  amount          Float
+  amount          Decimal       @db.Decimal(12, 2)
   status          PaymentStatus @default(PENDING)
   stripePaymentIntentId String?
   createdAt       DateTime      @default(now())
@@ -367,4 +406,17 @@ model InvoiceDelivery {
   createdAt DateTime        @default(now())
 
   @@index([invoiceId])
+}
+
+// Records every Stripe event id we've started processing, from both the
+// platform webhook and the Connect webhook (event ids are globally unique
+// across both streams). Inserting this row is how we atomically claim an
+// event: a duplicate delivery's insert hits the unique constraint on `id`
+// and is skipped, closing the race a plain "does a Payment already exist"
+// check can't — two concurrent deliveries can both pass that check before
+// either has written its Payment row.
+model StripeWebhookEvent {
+  id        String   @id
+  type      String
+  createdAt DateTime @default(now())
 }

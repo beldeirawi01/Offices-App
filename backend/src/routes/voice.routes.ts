@@ -5,12 +5,20 @@ import fs from "fs";
 import { prisma } from "../db/prisma";
 import { requireAuth } from "../middleware/auth";
 import { requireActiveSubscription } from "../middleware/subscription";
+import { requireVoiceUsageWithinCap } from "../middleware/voiceUsageCap";
 import { HttpError } from "../middleware/errorHandler";
 import { transcribeAudio } from "../services/transcription.service";
-import { extractJobDetails, extractQuoteDetails } from "../services/extraction.service";
+import { extractJobDetails, extractQuoteDetails, ExtractionValidationError } from "../services/extraction.service";
 import { createDraftInvoiceFromExtraction, mergeExtractionIntoInvoice } from "../services/invoice.service";
 import { createDraftQuoteFromExtraction } from "../services/quote.service";
-import { storeVoiceNoteAudio, getVoiceNoteAudioLocalPath, isCloudStorageConfigured, localUploadDir } from "../services/storage.service";
+import {
+  storeVoiceNoteAudio,
+  getVoiceNoteAudioLocalPath,
+  deleteStoredFile,
+  isCloudStorageConfigured,
+  localUploadDir,
+} from "../services/storage.service";
+import { looksLikeAudio } from "../utils/fileSignature";
 
 export const voiceRouter = Router();
 // NOTE: this router is mounted at bare "/api" in app.ts (its two routes don't
@@ -32,6 +40,12 @@ const upload = multer({
     },
   }),
   limits: { fileSize: 25 * 1024 * 1024 }, // 25MB, matches Whisper's cap
+  fileFilter: (_req, file, cb) => {
+    if (!file.mimetype.startsWith("audio/")) {
+      return cb(new HttpError(400, "Uploaded file must be an audio recording"));
+    }
+    cb(null, true);
+  },
 });
 
 /**
@@ -41,40 +55,53 @@ const upload = multer({
  * 3. Claude extracts structured billing fields
  * 4. A draft invoice is created for the tech to review before sending
  */
-voiceRouter.post("/jobs/:jobId/voice-notes", requireAuth, requireActiveSubscription, upload.single("audio"), async (req, res) => {
-  if (!req.file) {
-    throw new HttpError(400, "Missing audio file field 'audio'");
-  }
+voiceRouter.post(
+  "/jobs/:jobId/voice-notes",
+  requireAuth,
+  requireActiveSubscription,
+  requireVoiceUsageWithinCap,
+  upload.single("audio"),
+  async (req, res) => {
+    if (!req.file) {
+      throw new HttpError(400, "Missing audio file field 'audio'");
+    }
+    // fileFilter above only saw the client-declared Content-Type, which is
+    // easy to spoof — this checks what was actually written to disk.
+    if (!looksLikeAudio(req.file.path)) {
+      fs.unlink(req.file.path, () => {});
+      throw new HttpError(400, "Uploaded file does not look like a valid audio recording");
+    }
 
-  // QUOTE (on-arrival estimate) or INVOICE (post-job actuals, the default —
-  // keeps older mobile app builds that don't send this field working).
-  const purpose = req.body.purpose === "QUOTE" ? "QUOTE" : "INVOICE";
+    // QUOTE (on-arrival estimate) or INVOICE (post-job actuals, the default —
+    // keeps older mobile app builds that don't send this field working).
+    const purpose = req.body.purpose === "QUOTE" ? "QUOTE" : "INVOICE";
 
-  const job = await prisma.job.findFirst({
-    where: { id: req.params.jobId, organizationId: req.auth!.organizationId },
-    include: { client: true },
-  });
-  if (!job) throw new HttpError(404, "Job not found");
+    const job = await prisma.job.findFirst({
+      where: { id: req.params.jobId, organizationId: req.auth!.organizationId },
+      include: { client: true },
+    });
+    if (!job) throw new HttpError(404, "Job not found");
 
-  const stored = await storeVoiceNoteAudio(req.file.path, req.file.filename);
+    const stored = await storeVoiceNoteAudio(req.file.path, req.file.filename, req.file.mimetype);
 
-  const voiceNote = await prisma.voiceNote.create({
-    data: {
-      jobId: job.id,
-      audioUrl: stored.storageKey,
-      status: "UPLOADED",
-      purpose,
-    },
-  });
+    const voiceNote = await prisma.voiceNote.create({
+      data: {
+        jobId: job.id,
+        audioUrl: stored.storageKey,
+        status: "UPLOADED",
+        purpose,
+      },
+    });
 
-  res.status(202).json({ voiceNoteId: voiceNote.id, status: voiceNote.status });
+    res.status(202).json({ voiceNoteId: voiceNote.id, status: voiceNote.status });
 
-  // Process asynchronously so the tech isn't stuck waiting on-site;
-  // the mobile app polls GET /voice-notes/:id for the result.
-  processVoiceNote(voiceNote.id, stored.storageKey, job.id, job.organizationId, job.clientId, purpose).catch((err) => {
-    console.error(`Voice note ${voiceNote.id} processing failed`, err);
-  });
-});
+    // Process asynchronously so the tech isn't stuck waiting on-site;
+    // the mobile app polls GET /voice-notes/:id for the result.
+    processVoiceNote(voiceNote.id, stored.storageKey, job.id, job.organizationId, job.clientId, purpose).catch((err) => {
+      console.error(`Voice note ${voiceNote.id} processing failed`, err);
+    });
+  },
+);
 
 async function processVoiceNote(
   voiceNoteId: string,
@@ -95,10 +122,11 @@ async function processVoiceNote(
     });
 
     await prisma.voiceNote.update({ where: { id: voiceNoteId }, data: { status: "EXTRACTING" } });
-    const extracted = purpose === "QUOTE" ? await extractQuoteDetails(transcript) : await extractJobDetails(transcript);
+    const extraction = purpose === "QUOTE" ? await extractQuoteDetails(transcript) : await extractJobDetails(transcript);
+    const extracted = extraction.result;
     await prisma.voiceNote.update({
       where: { id: voiceNoteId },
-      data: { status: "EXTRACTED", extractedJson: extracted as any },
+      data: { status: "EXTRACTED", extractedJson: extracted as any, rawExtraction: extraction.raw },
     });
 
     if (purpose === "QUOTE") {
@@ -118,10 +146,27 @@ async function processVoiceNote(
         await mergeExtractionIntoInvoice(existingInvoice.id, extracted);
       }
     }
+
+    // The recording has done its job (a quote/invoice now exists from it) and
+    // nothing in the app ever plays it back — see the audioDeleted field
+    // comment in schema.prisma for the reasoning. Best-effort: a delete
+    // failure here shouldn't undo the otherwise-successful pipeline run.
+    try {
+      await deleteStoredFile(storageKey);
+      await prisma.voiceNote.update({ where: { id: voiceNoteId }, data: { audioDeleted: true } });
+    } catch (err) {
+      console.error(`Failed to delete audio for voice note ${voiceNoteId} after processing`, err);
+    }
   } catch (err) {
     await prisma.voiceNote.update({
       where: { id: voiceNoteId },
-      data: { status: "FAILED", errorMessage: err instanceof Error ? err.message : "Unknown error" },
+      data: {
+        status: "FAILED",
+        errorMessage: err instanceof Error ? err.message : "Unknown error",
+        // A validation failure still carries what Claude actually said, so a
+        // hallucinated/malformed extraction can be debugged after the fact.
+        ...(err instanceof ExtractionValidationError ? { rawExtraction: err.rawOutput } : {}),
+      },
     });
   } finally {
     // If audio was downloaded from S3 into a scratch temp file, clean it up.
