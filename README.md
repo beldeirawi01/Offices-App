@@ -151,6 +151,18 @@ The mobile app has a Jest + React Native Testing Library suite (`mobile/__tests_
 - **App store submission**: `mobile/` needs an Apple Developer account and Google Play Console account, plus an EAS Build + submission run — code is ready, publishing is a manual process only you can complete.
 - **Backups**: `backend/scripts/backup-db.sh` / `restore-db.sh` and `backend/docs/BACKUP_RESTORE.md` cover the mechanism (and a restore has been tested end to end), but *scheduling* it is a hosting decision — set up automated Postgres backups on whatever host you choose (most managed Postgres offerings include this — verify it's actually turned on).
 
+## Known gaps vs. established competitors
+
+Where Jobscribe is behind, or only at parity, against existing trades-software products:
+
+- Voice invoicing is now table stakes — Housecall Pro has it, and there are dozens of cheap App Store clones.
+- No dispatch, calendar, route optimization, or pricebook — these are the core of the full "trades suite" products.
+- No QuickBooks sync — Housecall Pro integrates with QuickBooks Online, and small trades shops often need this. ([Housecall Pro](https://www.housecallpro.com/llm-info/))
+- No e-signatures or change orders — Kvota has both.
+- English only — Kvota is bilingual, and Spanish matters in many trades crews.
+- Transcription is server-side — the offline queue uploads later once there's signal, whereas VoicePrice runs transcription fully on-device.
+- No in-person payments, online booking, or AI receptionist.
+
 ## Hosting
 
 `render.yaml` at the repo root is a ready-to-use [Render Blueprint](https://render.com/docs/blueprint-spec) provisioning the backend (Docker), a managed Postgres instance, and the dashboard as a static site with SPA routing. For Railway, use `backend/Dockerfile` for the API service, add a Postgres plugin, and deploy `dashboard/` as a static site with `npm run build` / publish `dist/`. The Expo mobile app ships via EAS Build once you're ready for internal testing or app store submission.
