@@ -3,6 +3,12 @@ import { render, fireEvent, waitFor } from "@testing-library/react-native";
 import { AuthProvider, useAuth } from "../src/context/AuthContext";
 import LoginScreen from "../src/screens/LoginScreen";
 import { api } from "../src/api/client";
+import { initI18n } from "../src/i18n";
+
+// LoginScreen renders translated strings via react-i18next — in the real app
+// App.tsx initializes i18next once at startup before anything renders, but
+// this test renders LoginScreen directly, so it has to do that setup itself.
+beforeAll(() => initI18n());
 
 // The real client wraps axios with interceptors that read expo-constants and
 // secure storage — irrelevant to this flow and awkward to boot in Jest, so
@@ -91,5 +97,22 @@ describe("mobile login flow", () => {
 
     await waitFor(() => getByText("Invalid email or password"));
     expect(queryByText(/Logged in as/)).toBeNull();
+  });
+
+  it("switches the login screen to Spanish and back via the language toggle", async () => {
+    const { getByText, getByPlaceholderText } = render(
+      <AuthProvider>
+        <AuthGate />
+      </AuthProvider>,
+    );
+    await waitFor(() => getByPlaceholderText("Email"));
+
+    fireEvent.press(getByText("Español"));
+    await waitFor(() => getByPlaceholderText("Correo electrónico"));
+    expect(getByText("Iniciar sesión")).toBeTruthy();
+
+    fireEvent.press(getByText("English"));
+    await waitFor(() => getByPlaceholderText("Email"));
+    expect(getByText("Sign in")).toBeTruthy();
   });
 });

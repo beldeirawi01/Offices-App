@@ -1,0 +1,40 @@
+{
+  "common": {
+    "cancel": "Cancelar",
+    "save": "Guardar",
+    "loading": "Cargando...",
+    "error": "Algo salió mal"
+  },
+  "login": {
+    "title": "Jobscribe",
+    "subtitle": "Inicia sesión para registrar trabajos",
+    "email": "Correo electrónico",
+    "password": "Contraseña",
+    "signIn": "Iniciar sesión",
+    "genericError": "No se pudo iniciar sesión"
+  },
+  "jobList": {
+    "title": "Trabajos de hoy",
+    "logOut": "Cerrar sesión",
+    "newJob": "+ Nuevo trabajo sin programar",
+    "empty": "No tienes trabajos asignados todavía.",
+    "loadError": "No se pudieron cargar tus trabajos. Desliza hacia abajo para reintentar.",
+    "pendingUpload_one": "{{count}} grabación esperando señal para subir",
+    "pendingUpload_other": "{{count}} grabaciones esperando señal para subir",
+    "tapToRecordQuote": "Toca para grabar una cotización",
+    "tapToViewTimeline": "Toca para ver el historial",
+    "quoteTag": "Cotización {{status}}",
+    "invoiceReady": "Factura lista",
+    "language": "English"
+  },
+  "navigation": {
+    "jobList": "Jobscribe",
+    "newJob": "Nuevo trabajo",
+    "jobDetail": "Trabajo",
+    "documentation": "Documentar trabajo",
+    "recordQuote": "Grabar cotización",
+    "recordInvoiceNote": "Grabar nota de trabajo",
+    "reviewQuote": "Revisar cotización",
+    "reviewInvoice": "Revisar factura"
+  }
+}

@@ -1,11 +1,13 @@
 import { FormEvent, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "../context/AuthContext";
 import AuthLayout from "../components/AuthLayout";
 
 export default function Register() {
   const { register } = useAuth();
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [organizationName, setOrganizationName] = useState("");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -21,7 +23,7 @@ export default function Register() {
       await register(organizationName, name, email, password);
       navigate("/");
     } catch (err: any) {
-      setError(err?.response?.data?.error ?? "Registration failed");
+      setError(err?.response?.data?.error ?? t("register.genericError"));
     } finally {
       setLoading(false);
     }
@@ -30,23 +32,23 @@ export default function Register() {
   return (
     <AuthLayout>
       <form className="auth-card" onSubmit={onSubmit}>
-        <h1>Create your account</h1>
-        <p className="subtitle">Set up your business in a couple minutes</p>
+        <h1>{t("register.title")}</h1>
+        <p className="subtitle">{t("register.subtitle")}</p>
         {error && <div className="error-banner">{error}</div>}
         <label>
-          Business name
+          {t("register.businessName")}
           <input value={organizationName} onChange={(e) => setOrganizationName(e.target.value)} required />
         </label>
         <label>
-          Your name
+          {t("register.yourName")}
           <input value={name} onChange={(e) => setName(e.target.value)} required />
         </label>
         <label>
-          Email
+          {t("register.email")}
           <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
         </label>
         <label>
-          Password
+          {t("register.password")}
           <input
             type="password"
             value={password}
@@ -56,14 +58,14 @@ export default function Register() {
           />
         </label>
         <button type="submit" disabled={loading}>
-          {loading ? "Creating..." : "Create account"}
+          {loading ? t("register.creating") : t("register.createAccount")}
         </button>
         <p className="legal-fineprint">
           By creating an account you agree to our <Link to="/terms">Terms of Service</Link> and{" "}
           <Link to="/privacy">Privacy Policy</Link>.
         </p>
         <p className="switch-link">
-          Already have an account? <Link to="/login">Sign in</Link>
+          {t("register.alreadyHaveAccount")} <Link to="/login">{t("register.signIn")}</Link>
         </p>
       </form>
     </AuthLayout>

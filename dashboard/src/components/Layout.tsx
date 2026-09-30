@@ -1,4 +1,5 @@
 import { NavLink, Outlet } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "../context/AuthContext";
 import {
   BrandMark,
@@ -13,17 +14,18 @@ import {
 } from "./Icons";
 
 const NAV_ITEMS = [
-  { to: "/", label: "Dashboard", icon: HomeIcon, end: true },
-  { to: "/jobs", label: "Scheduling", icon: CalendarIcon },
-  { to: "/clients", label: "Clients", icon: UsersIcon },
-  { to: "/quotes", label: "Quotes", icon: QuoteIcon },
-  { to: "/invoices", label: "Invoices", icon: InvoiceIcon },
-  { to: "/team", label: "Team", icon: TeamIcon },
-  { to: "/settings", label: "Settings", icon: SettingsIcon },
+  { to: "/", labelKey: "nav.dashboard", icon: HomeIcon, end: true },
+  { to: "/jobs", labelKey: "nav.scheduling", icon: CalendarIcon },
+  { to: "/clients", labelKey: "nav.clients", icon: UsersIcon },
+  { to: "/quotes", labelKey: "nav.quotes", icon: QuoteIcon },
+  { to: "/invoices", labelKey: "nav.invoices", icon: InvoiceIcon },
+  { to: "/team", labelKey: "nav.team", icon: TeamIcon },
+  { to: "/settings", labelKey: "nav.settings", icon: SettingsIcon },
 ];
 
 export default function Layout() {
   const { user, logout } = useAuth();
+  const { t } = useTranslation();
 
   return (
     <div className="app-shell">
@@ -35,10 +37,10 @@ export default function Layout() {
           Jobscribe
         </div>
         <nav>
-          {NAV_ITEMS.map(({ to, label, icon: Icon, end }) => (
+          {NAV_ITEMS.map(({ to, labelKey, icon: Icon, end }) => (
             <NavLink key={to} to={to} end={end}>
               <Icon />
-              <span>{label}</span>
+              <span>{t(labelKey)}</span>
             </NavLink>
           ))}
         </nav>
@@ -51,7 +53,7 @@ export default function Layout() {
             </div>
           </div>
           <button className="btn-ghost" onClick={logout}>
-            <LogoutIcon /> Log out
+            <LogoutIcon /> {t("nav.logOut")}
           </button>
         </div>
       </aside>

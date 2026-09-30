@@ -1,11 +1,13 @@
 import { FormEvent, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "../context/AuthContext";
 import AuthLayout from "../components/AuthLayout";
 
 export default function Login() {
   const { login } = useAuth();
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -19,7 +21,7 @@ export default function Login() {
       await login(email, password);
       navigate("/");
     } catch (err: any) {
-      setError(err?.response?.data?.error ?? "Login failed");
+      setError(err?.response?.data?.error ?? t("login.genericError"));
     } finally {
       setLoading(false);
     }
@@ -28,25 +30,25 @@ export default function Login() {
   return (
     <AuthLayout>
       <form className="auth-card" onSubmit={onSubmit}>
-        <h1>Welcome back</h1>
-        <p className="subtitle">Sign in to your owner dashboard</p>
+        <h1>{t("login.title")}</h1>
+        <p className="subtitle">{t("login.subtitle")}</p>
         {error && <div className="error-banner">{error}</div>}
         <label>
-          Email
+          {t("login.email")}
           <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
         </label>
         <label>
-          Password
+          {t("login.password")}
           <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
         </label>
         <button type="submit" disabled={loading}>
-          {loading ? "Signing in..." : "Sign in"}
+          {loading ? t("login.signingIn") : t("login.signIn")}
         </button>
         <p className="switch-link">
-          <Link to="/forgot-password">Forgot password?</Link>
+          <Link to="/forgot-password">{t("login.forgotPassword")}</Link>
         </p>
         <p className="switch-link">
-          New here? <Link to="/register">Create an organization</Link>
+          {t("login.newHere")} <Link to="/register">{t("login.createOrganization")}</Link>
         </p>
       </form>
     </AuthLayout>

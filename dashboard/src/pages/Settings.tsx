@@ -1,5 +1,6 @@
 import { FormEvent, useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { api, Organization } from "../api/client";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../components/Toast";
@@ -20,6 +21,7 @@ const TIMEZONE_OPTIONS = [
 
 export default function Settings() {
   const { user, logout } = useAuth();
+  const { t, i18n } = useTranslation();
   const toast = useToast();
   const confirm = useConfirm();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -299,6 +301,29 @@ export default function Settings() {
     <div>
       <h1>Settings</h1>
       <p className="page-subtitle">Business details and your account.</p>
+
+      <section className="panel">
+        <h2>{t("settings.language")}</h2>
+        <div className="form-card">
+          <p className="muted small">{t("settings.languageHelp")}</p>
+          <div className="button-row">
+            <button
+              type="button"
+              className={i18n.language === "en" ? undefined : "btn-secondary"}
+              onClick={() => i18n.changeLanguage("en")}
+            >
+              English
+            </button>
+            <button
+              type="button"
+              className={i18n.language === "es" ? undefined : "btn-secondary"}
+              onClick={() => i18n.changeLanguage("es")}
+            >
+              Español
+            </button>
+          </div>
+        </div>
+      </section>
 
       <section className="panel">
         <h2>Subscription</h2>

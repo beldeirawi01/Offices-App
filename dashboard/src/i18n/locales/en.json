@@ -1,0 +1,41 @@
+{
+  "nav": {
+    "dashboard": "Dashboard",
+    "scheduling": "Scheduling",
+    "clients": "Clients",
+    "quotes": "Quotes",
+    "invoices": "Invoices",
+    "team": "Team",
+    "settings": "Settings",
+    "logOut": "Log out"
+  },
+  "login": {
+    "title": "Welcome back",
+    "subtitle": "Sign in to your owner dashboard",
+    "email": "Email",
+    "password": "Password",
+    "signIn": "Sign in",
+    "signingIn": "Signing in...",
+    "forgotPassword": "Forgot password?",
+    "newHere": "New here?",
+    "createOrganization": "Create an organization",
+    "genericError": "Login failed"
+  },
+  "register": {
+    "title": "Create your account",
+    "subtitle": "Set up your business in a couple minutes",
+    "businessName": "Business name",
+    "yourName": "Your name",
+    "email": "Email",
+    "password": "Password",
+    "createAccount": "Create account",
+    "creating": "Creating...",
+    "alreadyHaveAccount": "Already have an account?",
+    "signIn": "Sign in",
+    "genericError": "Registration failed"
+  },
+  "settings": {
+    "language": "Language",
+    "languageHelp": "Changes the dashboard's language for your account on this browser."
+  }
+}

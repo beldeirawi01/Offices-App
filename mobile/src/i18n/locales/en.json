@@ -1,0 +1,40 @@
+{
+  "common": {
+    "cancel": "Cancel",
+    "save": "Save",
+    "loading": "Loading...",
+    "error": "Something went wrong"
+  },
+  "login": {
+    "title": "Jobscribe",
+    "subtitle": "Sign in to log jobs",
+    "email": "Email",
+    "password": "Password",
+    "signIn": "Sign in",
+    "genericError": "Login failed"
+  },
+  "jobList": {
+    "title": "Today's jobs",
+    "logOut": "Log out",
+    "newJob": "+ New unscheduled job",
+    "empty": "No jobs assigned to you yet.",
+    "loadError": "Could not load your jobs. Pull down to try again.",
+    "pendingUpload_one": "{{count}} recording waiting for signal to upload",
+    "pendingUpload_other": "{{count}} recordings waiting for signal to upload",
+    "tapToRecordQuote": "Tap to record a quote",
+    "tapToViewTimeline": "Tap to view timeline",
+    "quoteTag": "Quote {{status}}",
+    "invoiceReady": "Invoice ready",
+    "language": "Español"
+  },
+  "navigation": {
+    "jobList": "Jobscribe",
+    "newJob": "New job",
+    "jobDetail": "Job",
+    "documentation": "Document job",
+    "recordQuote": "Record quote",
+    "recordInvoiceNote": "Record job note",
+    "reviewQuote": "Review quote",
+    "reviewInvoice": "Review invoice"
+  }
+}

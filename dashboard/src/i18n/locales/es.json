@@ -1,0 +1,41 @@
+{
+  "nav": {
+    "dashboard": "Panel",
+    "scheduling": "Programación",
+    "clients": "Clientes",
+    "quotes": "Cotizaciones",
+    "invoices": "Facturas",
+    "team": "Equipo",
+    "settings": "Configuración",
+    "logOut": "Cerrar sesión"
+  },
+  "login": {
+    "title": "Bienvenido de nuevo",
+    "subtitle": "Inicia sesión en tu panel de propietario",
+    "email": "Correo electrónico",
+    "password": "Contraseña",
+    "signIn": "Iniciar sesión",
+    "signingIn": "Iniciando sesión...",
+    "forgotPassword": "¿Olvidaste tu contraseña?",
+    "newHere": "¿Nuevo aquí?",
+    "createOrganization": "Crear una organización",
+    "genericError": "Error al iniciar sesión"
+  },
+  "register": {
+    "title": "Crea tu cuenta",
+    "subtitle": "Configura tu negocio en un par de minutos",
+    "businessName": "Nombre del negocio",
+    "yourName": "Tu nombre",
+    "email": "Correo electrónico",
+    "password": "Contraseña",
+    "createAccount": "Crear cuenta",
+    "creating": "Creando...",
+    "alreadyHaveAccount": "¿Ya tienes una cuenta?",
+    "signIn": "Iniciar sesión",
+    "genericError": "Error al registrarse"
+  },
+  "settings": {
+    "language": "Idioma",
+    "languageHelp": "Cambia el idioma del panel para tu cuenta en este navegador."
+  }
+}

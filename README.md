@@ -68,6 +68,15 @@ One-directional (Jobscribe → QuickBooks) push of clients and invoices, for sho
 - **Change orders** (`ChangeOrder` model) capture a scope/price addition discovered mid-job — a tech finds something unexpected, types a description and an amount from the job detail page, and sends it to the client for sign-off the same way a quote is sent. The client reviews and either approves (same e-signature requirement as a quote) or declines it on a public page (`/change-orders/view/:token`).
 - **Deliberately does not touch any invoice automatically.** An invoice that's already been sent or paid can't cleanly absorb a new line item, so an approved change order is just a signed, timestamped record — the owner adds the approved amount to the job's invoice themselves when they create or edit it. A change order is also a single flat description + amount, not its own itemized line-item table, since it's meant to capture a spoken, in-the-moment addition, not a full re-quote.
 
+## Bilingual (Spanish) support
+
+English/Spanish i18n via `i18next`, with per-app locale detection and a persisted user choice — no server involvement, since UI language is a per-device/browser preference, not business data.
+
+- **Mobile** (`mobile/src/i18n`) detects the device's language (`expo-localization`) on first launch, falling back to English for anything other than Spanish, and remembers a manual override (the language toggle on the login and job-list screens) in `AsyncStorage` across restarts. Fully translated: the login screen and the job list (the two screens every tech sees on every use).
+- **Dashboard** (`dashboard/src/i18n`) detects the browser's language (`i18next-browser-languagedetector`) and remembers a manual override (the language switcher in Settings) in `localStorage`. Fully translated: the sidebar navigation, and the login/register screens. `load: "languageOnly"` normalizes a locale like `en-US` down to `en` before matching translations, so this doesn't require the browser to report an exact `en`/`es` tag.
+- **Deliberately partial, not silently incomplete**: only the highest-traffic screens are translated so far (the ones above) — the rest of the dashboard and mobile app still render in English regardless of language setting. Extending coverage to remaining screens is a mechanical follow-up (add keys to `locales/en.json`/`es.json`, swap hardcoded strings for `t(...)`), not new infrastructure.
+- **Existing Playwright E2E suite is unaffected**: it asserts on English label/button text, and the detector's browser-language default resolves to English in that environment, same as it will for the large majority of real users whose browser reports an English locale.
+
 ## Local setup
 
 ### 1. Backend
@@ -161,6 +170,7 @@ The mobile app has a Jest + React Native Testing Library suite (`mobile/__tests_
 - A GDPR-style data export/delete path: Settings → "Your data" lets an owner download a full JSON export of their business's data, or permanently delete the account and everything under it (password-confirmed, cancels the Stripe subscription, deletes stored files) — see `GET /api/organizations/me/export` and `POST /api/organizations/me/delete`.
 - QuickBooks Online sync — clients and sent/paid invoices push automatically to a connected QBO company, with a manual "Sync now" catch-up and a password-free OAuth connect flow from Settings (see **QuickBooks Online sync** above).
 - E-signatures on quote acceptance, and change orders for mid-job scope/price additions that need the client's signed sign-off before they're binding (see **E-signatures and change orders** above).
+- Bilingual (English/Spanish) support on the highest-traffic mobile and dashboard screens, with a persisted per-device/browser language override (see **Bilingual (Spanish) support** above).
 
 **Needs your action, not more code:**
 - **Accounts/credentials**: production OpenAI, Anthropic, Twilio, Brevo, Stripe (with **Connect enabled**, plus the second Connect-scoped webhook endpoint, plus a real $29/month Price for subscription billing — see **Stripe Connect** and **Subscription billing** above), an S3-compatible bucket (AWS S3, Cloudflare R2, Backblaze B2), and an Intuit Developer app for QuickBooks sync (see **QuickBooks Online sync** above) — this repo only has the integration code, not the accounts.
@@ -176,7 +186,7 @@ Where Jobscribe is behind, or only at parity, against existing trades-software p
 
 - Voice invoicing is now table stakes — Housecall Pro has it, and there are dozens of cheap App Store clones.
 - No dispatch, calendar, route optimization, or pricebook — these are the core of the full "trades suite" products.
-- English only — Kvota is bilingual, and Spanish matters in many trades crews.
+- Partially bilingual — Kvota is fully bilingual; Jobscribe now has English/Spanish on the highest-traffic screens (login, job list, dashboard nav/auth) but most of the app is still English-only (see **Bilingual (Spanish) support** above).
 - Transcription is server-side — the offline queue uploads later once there's signal, whereas VoicePrice runs transcription fully on-device.
 - No in-person payments, online booking, or AI receptionist.
 
