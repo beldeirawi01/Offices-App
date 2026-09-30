@@ -2,6 +2,7 @@
   "nav": {
     "dashboard": "Dashboard",
     "scheduling": "Scheduling",
+    "calendar": "Calendar",
     "clients": "Clients",
     "quotes": "Quotes",
     "invoices": "Invoices",

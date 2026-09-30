@@ -77,6 +77,14 @@ English/Spanish i18n via `i18next`, with per-app locale detection and a persiste
 - **Deliberately partial, not silently incomplete**: only the highest-traffic screens are translated so far (the ones above) — the rest of the dashboard and mobile app still render in English regardless of language setting. Extending coverage to remaining screens is a mechanical follow-up (add keys to `locales/en.json`/`es.json`, swap hardcoded strings for `t(...)`), not new infrastructure.
 - **Existing Playwright E2E suite is unaffected**: it asserts on English label/button text, and the detector's browser-language default resolves to English in that environment, same as it will for the large majority of real users whose browser reports an English locale.
 
+## Basic team calendar
+
+A week-view scheduling board (Dashboard → Calendar) alongside the existing flat Jobs list — not a full dispatch/route-optimization product, just a visual answer to "who's doing what, when."
+
+- **Grid layout**: one row per technician (plus an "Unassigned" row), one column per day of the current week, populated from the same `Job.scheduledAt`/`assignedTechId` fields the Jobs list and mobile app already use — no new data model. `GET /api/jobs?from=&to=` (new) returns every job in a date range in one response instead of one page at a time, which the week grid needs and the existing paginated list doesn't.
+- **Click a job to edit it**: the calendar itself is read-only navigation — clicking a job card goes to its existing job detail page, where rescheduling or reassigning a tech already worked before this feature and still does. This avoids a second, parallel edit surface with its own validation to keep in sync with the first.
+- **Not included**: drag-and-drop rescheduling, route optimization/mapping between jobs, or a dispatch/notify-the-tech flow — those are meaningfully bigger builds than "can the owner see the week at a glance," which is what this closes.
+
 ## Local setup
 
 ### 1. Backend
@@ -171,6 +179,7 @@ The mobile app has a Jest + React Native Testing Library suite (`mobile/__tests_
 - QuickBooks Online sync — clients and sent/paid invoices push automatically to a connected QBO company, with a manual "Sync now" catch-up and a password-free OAuth connect flow from Settings (see **QuickBooks Online sync** above).
 - E-signatures on quote acceptance, and change orders for mid-job scope/price additions that need the client's signed sign-off before they're binding (see **E-signatures and change orders** above).
 - Bilingual (English/Spanish) support on the highest-traffic mobile and dashboard screens, with a persisted per-device/browser language override (see **Bilingual (Spanish) support** above).
+- A basic team calendar/scheduling board — a week-at-a-glance view of every tech's scheduled jobs (see **Basic team calendar** above).
 
 **Needs your action, not more code:**
 - **Accounts/credentials**: production OpenAI, Anthropic, Twilio, Brevo, Stripe (with **Connect enabled**, plus the second Connect-scoped webhook endpoint, plus a real $29/month Price for subscription billing — see **Stripe Connect** and **Subscription billing** above), an S3-compatible bucket (AWS S3, Cloudflare R2, Backblaze B2), and an Intuit Developer app for QuickBooks sync (see **QuickBooks Online sync** above) — this repo only has the integration code, not the accounts.
@@ -185,7 +194,7 @@ The mobile app has a Jest + React Native Testing Library suite (`mobile/__tests_
 Where Jobscribe is behind, or only at parity, against existing trades-software products:
 
 - Voice invoicing is now table stakes — Housecall Pro has it, and there are dozens of cheap App Store clones.
-- No dispatch, calendar, route optimization, or pricebook — these are the core of the full "trades suite" products.
+- No route optimization or pricebook, and no automated dispatch/notify-the-tech flow — Jobscribe now has a basic team calendar (see **Basic team calendar** above), but not the full "trades suite" dispatch experience.
 - Partially bilingual — Kvota is fully bilingual; Jobscribe now has English/Spanish on the highest-traffic screens (login, job list, dashboard nav/auth) but most of the app is still English-only (see **Bilingual (Spanish) support** above).
 - Transcription is server-side — the offline queue uploads later once there's signal, whereas VoicePrice runs transcription fully on-device.
 - No in-person payments, online booking, or AI receptionist.

@@ -17,17 +17,44 @@ function parsePagination(query: Record<string, unknown>) {
   return { skip: (page - 1) * pageSize, take: pageSize, page, pageSize };
 }
 
+// A valid from/to pair means the caller wants every job in that range at
+// once (the calendar board), not one page at a time — an invalid or partial
+// pair is ignored rather than rejected, so it just falls back to the normal
+// paginated list.
+function parseDateRange(query: Record<string, unknown>): { gte: Date; lte: Date } | null {
+  if (!query.from || !query.to) return null;
+  const gte = new Date(String(query.from));
+  const lte = new Date(String(query.to));
+  if (isNaN(gte.getTime()) || isNaN(lte.getTime())) return null;
+  return { gte, lte };
+}
+
 // Scheduling view: upcoming jobs, optionally scoped to the logged-in tech.
 jobsRouter.get("/", async (req, res) => {
   const { status, mine } = req.query;
-  const { skip, take, page, pageSize } = parsePagination(req.query as Record<string, unknown>);
+  const dateRange = parseDateRange(req.query as Record<string, unknown>);
 
   const where = {
     organizationId: req.auth!.organizationId,
     ...(status ? { status: status as any } : {}),
     ...(mine === "true" ? { assignedTechId: req.auth!.userId } : {}),
+    ...(dateRange ? { scheduledAt: dateRange } : {}),
   };
 
+  // The calendar board needs the whole range in one shot, not a page — a
+  // week/month of jobs is small enough that a generous cap is fine.
+  if (dateRange) {
+    const jobs = await prisma.job.findMany({
+      where,
+      include: { client: true, assignedTech: true, invoice: true, quote: true },
+      orderBy: { scheduledAt: "asc" },
+      take: 500,
+    });
+    res.json({ data: jobs, pagination: { page: 1, pageSize: jobs.length, total: jobs.length, totalPages: 1 } });
+    return;
+  }
+
+  const { skip, take, page, pageSize } = parsePagination(req.query as Record<string, unknown>);
   const [jobs, total] = await Promise.all([
     prisma.job.findMany({
       where,

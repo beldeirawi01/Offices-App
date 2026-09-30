@@ -42,6 +42,18 @@ export function CalendarIcon(props: IconProps) {
   );
 }
 
+export function CalendarGridIcon(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <rect x="3.5" y="5" width="17" height="16" rx="2.2" />
+      <path d="M3.5 9.5h17" />
+      <path d="M8 3v4M16 3v4" />
+      <path d="M9.5 9.5v11.5M14.5 9.5v11.5" />
+      <path d="M3.5 14.5h17" />
+    </svg>
+  );
+}
+
 export function UsersIcon(props: IconProps) {
   return (
     <svg {...base} {...props}>

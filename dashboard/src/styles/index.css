@@ -1434,3 +1434,98 @@ p.small {
   gap: 10px;
   margin-top: 22px;
 }
+
+/* ---------- Calendar ---------- */
+
+.calendar-board {
+  overflow-x: auto;
+}
+
+.calendar-grid {
+  display: grid;
+  min-width: 900px;
+  border-top: 1px solid var(--line);
+  border-left: 1px solid var(--line);
+}
+
+.calendar-corner {
+  border-bottom: 1px solid var(--line);
+  border-right: 1px solid var(--line);
+  background: var(--surface-sunken);
+}
+
+.calendar-day-header {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--line);
+  border-right: 1px solid var(--line);
+  background: var(--surface-sunken);
+  text-align: center;
+}
+
+.calendar-day-name {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--steel);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.calendar-day-date {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--ink);
+  margin-top: 2px;
+}
+
+.calendar-row-label {
+  padding: 10px;
+  border-bottom: 1px solid var(--line);
+  border-right: 1px solid var(--line);
+  background: var(--surface-sunken);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+}
+
+.calendar-cell {
+  min-height: 64px;
+  padding: 6px;
+  border-bottom: 1px solid var(--line);
+  border-right: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.calendar-job {
+  display: flex;
+  flex-direction: column;
+  padding: 4px 7px;
+  border-radius: 4px;
+  border-left: 3px solid var(--line-strong);
+  background: var(--surface-sunken);
+  color: var(--ink);
+  text-decoration: none;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.calendar-job:hover {
+  filter: brightness(0.97);
+}
+
+.calendar-job-time {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 11px;
+}
+
+.calendar-job-title {
+  font-weight: 600;
+}
+
+.calendar-job-client {
+  color: var(--steel);
+}

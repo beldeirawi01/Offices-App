@@ -5,6 +5,7 @@ import {
   BrandMark,
   HomeIcon,
   CalendarIcon,
+  CalendarGridIcon,
   UsersIcon,
   QuoteIcon,
   InvoiceIcon,
@@ -16,6 +17,7 @@ import {
 const NAV_ITEMS = [
   { to: "/", labelKey: "nav.dashboard", icon: HomeIcon, end: true },
   { to: "/jobs", labelKey: "nav.scheduling", icon: CalendarIcon },
+  { to: "/calendar", labelKey: "nav.calendar", icon: CalendarGridIcon },
   { to: "/clients", labelKey: "nav.clients", icon: UsersIcon },
   { to: "/quotes", labelKey: "nav.quotes", icon: QuoteIcon },
   { to: "/invoices", labelKey: "nav.invoices", icon: InvoiceIcon },

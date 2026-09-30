@@ -2,6 +2,7 @@
   "nav": {
     "dashboard": "Panel",
     "scheduling": "Programación",
+    "calendar": "Calendario",
     "clients": "Clientes",
     "quotes": "Cotizaciones",
     "invoices": "Facturas",
