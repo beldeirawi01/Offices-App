@@ -169,6 +169,61 @@ export async function deliverQuoteToClient(params: {
   return results;
 }
 
+/**
+ * Sends a change order to the client for approval — same channel rules as
+ * invoice/quote delivery, pointing at the public approve/decline page.
+ */
+export async function deliverChangeOrderToClient(params: {
+  clientEmail?: string | null;
+  clientPhone?: string | null;
+  clientSmsConsent: boolean;
+  jobTitle: string;
+  pageUrl: string;
+  amount: Prisma.Decimal;
+  businessName: string;
+}): Promise<DeliveryResult[]> {
+  const results: DeliveryResult[] = [];
+
+  if (params.clientPhone && params.clientSmsConsent) {
+    try {
+      await sendSms({
+        to: params.clientPhone,
+        body: `${params.businessName} has a change order for "${params.jobTitle}" (+$${params.amount.toFixed(2)}) that needs your approval: ${params.pageUrl}`,
+      });
+      results.push({ channel: "SMS", recipient: params.clientPhone, success: true });
+    } catch (err) {
+      results.push({
+        channel: "SMS",
+        recipient: params.clientPhone,
+        success: false,
+        error: err instanceof Error ? err.message : "Unknown error",
+      });
+    }
+  }
+
+  if (params.clientEmail) {
+    try {
+      await sendEmail({
+        to: params.clientEmail,
+        fromName: params.businessName,
+        subject: `Change order for "${params.jobTitle}" — $${params.amount.toFixed(2)}`,
+        text: `${params.businessName} has proposed a change order for "${params.jobTitle}" for an additional $${params.amount.toFixed(2)}.\n\nReview and respond: ${params.pageUrl}`,
+        html: `<p><strong>${params.businessName}</strong> has proposed a change order for "${params.jobTitle}" for an additional <strong>$${params.amount.toFixed(2)}</strong>.</p><p><a href="${params.pageUrl}">Review and respond</a></p>`,
+      });
+      results.push({ channel: "EMAIL", recipient: params.clientEmail, success: true });
+    } catch (err) {
+      results.push({
+        channel: "EMAIL",
+        recipient: params.clientEmail,
+        success: false,
+        error: err instanceof Error ? err.message : "Unknown error",
+      });
+    }
+  }
+
+  return results;
+}
+
 /** Sends a payment reminder for an overdue invoice, same channel rules as delivery. */
 export async function sendInvoiceReminder(params: {
   clientEmail?: string | null;

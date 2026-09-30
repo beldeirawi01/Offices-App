@@ -61,6 +61,12 @@ enum SubscriptionStatus {
   INCOMPLETE
 }
 
+enum ChangeOrderStatus {
+  PENDING
+  APPROVED
+  DECLINED
+}
+
 model Organization {
   id        String   @id @default(cuid())
   name      String
@@ -140,6 +146,7 @@ model Organization {
   jobs     Job[]
   invoices Invoice[]
   quotes   Quote[]
+  changeOrders ChangeOrder[]
 }
 
 model User {
@@ -219,6 +226,7 @@ model Job {
   invoice       Invoice?
   quote         Quote?
   documentation JobDocumentation[]
+  changeOrders  ChangeOrder[]
 
   @@index([organizationId])
   @@index([clientId])
@@ -383,6 +391,7 @@ model Quote {
 
   lineItems  QuoteLineItem[]
   deliveries QuoteDelivery[]
+  signature  Signature?
 
   @@unique([organizationId, quoteNumber])
   @@index([organizationId])
@@ -453,4 +462,55 @@ model StripeWebhookEvent {
   id        String   @id
   type      String
   createdAt DateTime @default(now())
+}
+
+// A drawn e-signature captured on the public client-facing page — quote
+// acceptance, or a change order approval. Small enough (canvas-drawn line
+// art as a PNG) to store as a data-URL string directly rather than routing
+// through S3/local-disk storage like photos or audio. `quoteId`/
+// `changeOrderId` are both optional and each unique: a signature belongs to
+// exactly one of them, never both, and each of those can have at most one.
+model Signature {
+  id             String   @id @default(cuid())
+  signerName     String
+  signatureImage String
+  ipAddress      String?
+  signedAt       DateTime @default(now())
+
+  quote         Quote?       @relation(fields: [quoteId], references: [id])
+  quoteId       String?      @unique
+  changeOrder   ChangeOrder? @relation(fields: [changeOrderId], references: [id])
+  changeOrderId String?      @unique
+}
+
+// A proposed scope/price addition to a job discovered mid-work (e.g. "found
+// corroded wiring behind the wall, needs replacing, +$150") that needs the
+// client's sign-off before it's binding. Deliberately a single flat
+// description + amount rather than its own itemized line-item table — this
+// is a spoken, in-the-moment addition, not a re-quote — and deliberately
+// does NOT automatically modify any invoice on approval: the owner adds the
+// approved amount to the job's invoice themselves when they create/edit it,
+// since an invoice already sent or paid can't cleanly absorb a new line
+// item automatically.
+model ChangeOrder {
+  id             String            @id @default(cuid())
+  organization   Organization      @relation(fields: [organizationId], references: [id])
+  organizationId String
+  job            Job               @relation(fields: [jobId], references: [id])
+  jobId          String
+  description    String
+  amount         Decimal           @db.Decimal(12, 2)
+  status         ChangeOrderStatus @default(PENDING)
+  // Unguessable token for the client-facing approve/decline page, same
+  // pattern as Invoice/Quote.publicToken.
+  publicToken    String            @unique @default(uuid())
+  sentAt         DateTime?
+  respondedAt    DateTime?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  signature Signature?
+
+  @@index([organizationId])
+  @@index([jobId])
 }

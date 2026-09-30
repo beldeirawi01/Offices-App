@@ -1,6 +1,6 @@
 import { FormEvent, useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { api, Client, Job, JobDocumentation, Paginated, Tech } from "../api/client";
+import { api, ChangeOrder, Client, Job, JobDocumentation, Paginated, Tech } from "../api/client";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../components/Toast";
 import { useConfirm } from "../components/ConfirmDialog";
@@ -26,6 +26,12 @@ export default function JobDetail() {
   const [job, setJob] = useState<Job | null>(null);
   const [techs, setTechs] = useState<Tech[]>([]);
   const [docs, setDocs] = useState<JobDocumentation[]>([]);
+  const [changeOrders, setChangeOrders] = useState<ChangeOrder[]>([]);
+  const [showNewChangeOrder, setShowNewChangeOrder] = useState(false);
+  const [changeOrderDescription, setChangeOrderDescription] = useState("");
+  const [changeOrderAmount, setChangeOrderAmount] = useState("");
+  const [changeOrderSaving, setChangeOrderSaving] = useState(false);
+  const [sendingChangeOrderId, setSendingChangeOrderId] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({
     title: "",
@@ -73,6 +79,47 @@ export default function JobDetail() {
       .then((res) => setDocs(res.data))
       .catch(() => toast.error("Could not load job documentation"));
   }, [id]);
+
+  const loadChangeOrders = () => {
+    api
+      .get<ChangeOrder[]>(`/jobs/${id}/change-orders`)
+      .then((res) => setChangeOrders(res.data))
+      .catch(() => toast.error("Could not load change orders"));
+  };
+  useEffect(loadChangeOrders, [id]);
+
+  const onCreateChangeOrder = async (e: FormEvent) => {
+    e.preventDefault();
+    setChangeOrderSaving(true);
+    try {
+      await api.post(`/jobs/${id}/change-orders`, {
+        description: changeOrderDescription,
+        amount: Number(changeOrderAmount),
+      });
+      setChangeOrderDescription("");
+      setChangeOrderAmount("");
+      setShowNewChangeOrder(false);
+      toast.success("Change order created.");
+      loadChangeOrders();
+    } catch (err: any) {
+      toast.error(err?.response?.data?.error ?? "Could not create change order");
+    } finally {
+      setChangeOrderSaving(false);
+    }
+  };
+
+  const onSendChangeOrder = async (changeOrderId: string) => {
+    setSendingChangeOrderId(changeOrderId);
+    try {
+      await api.post(`/change-orders/${changeOrderId}/send`);
+      toast.success("Change order sent to client.");
+      loadChangeOrders();
+    } catch (err: any) {
+      toast.error(err?.response?.data?.error ?? "Could not send change order");
+    } finally {
+      setSendingChangeOrderId(null);
+    }
+  };
 
   const onToggleClientFacing = async (docId: string, clientFacing: boolean) => {
     const { data } = await api.put<JobDocumentation>(`/documentation/${docId}`, { clientFacing });
@@ -282,6 +329,87 @@ export default function JobDetail() {
               <button type="button">+ Create invoice for this job</button>
             </Link>
           </div>
+        )}
+      </section>
+
+      <section className="panel">
+        <div className="page-header" style={{ marginBottom: 0 }}>
+          <h2>Change orders</h2>
+          <button type="button" className="btn-secondary" onClick={() => setShowNewChangeOrder((v) => !v)}>
+            {showNewChangeOrder ? "Cancel" : "+ New change order"}
+          </button>
+        </div>
+        <p className="muted small">
+          Extra scope or cost discovered mid-job that needs the client's sign-off. Approving here doesn't change any
+          invoice automatically — add the approved amount yourself when you create or edit this job's invoice.
+        </p>
+
+        {showNewChangeOrder && (
+          <form className="form-card" onSubmit={onCreateChangeOrder}>
+            <label>
+              What's changing
+              <textarea
+                rows={2}
+                placeholder="e.g. Found corroded wiring behind the wall, needs replacing"
+                value={changeOrderDescription}
+                onChange={(e) => setChangeOrderDescription(e.target.value)}
+                required
+              />
+            </label>
+            <label>
+              Additional cost
+              <input
+                type="number"
+                min="0.01"
+                step="0.01"
+                value={changeOrderAmount}
+                onChange={(e) => setChangeOrderAmount(e.target.value)}
+                required
+              />
+            </label>
+            <div className="form-actions">
+              <button type="submit" disabled={changeOrderSaving}>
+                {changeOrderSaving ? "Creating..." : "Create change order"}
+              </button>
+            </div>
+          </form>
+        )}
+
+        {changeOrders.length === 0 ? (
+          <p className="muted">No change orders for this job yet.</p>
+        ) : (
+          <ul className="bar-list">
+            {changeOrders.map((co) => (
+              <li key={co.id}>
+                <div className="voice-note-row">
+                  <span>
+                    {co.description} — ${co.amount.toFixed(2)}
+                  </span>
+                  <span className={`badge badge-${co.status.toLowerCase()}`}>{co.status.toLowerCase()}</span>
+                </div>
+                {co.signature && (
+                  <p className="muted small">
+                    Signed by {co.signature.signerName} on {new Date(co.signature.signedAt).toLocaleString()}
+                  </p>
+                )}
+                {co.status === "PENDING" && !co.sentAt && (
+                  <div className="button-row" style={{ marginTop: 8 }}>
+                    <button
+                      type="button"
+                      className="btn-secondary"
+                      onClick={() => onSendChangeOrder(co.id)}
+                      disabled={sendingChangeOrderId === co.id}
+                    >
+                      {sendingChangeOrderId === co.id ? "Sending..." : "Send to client"}
+                    </button>
+                  </div>
+                )}
+                {co.status === "PENDING" && co.sentAt && (
+                  <p className="muted small">Sent {new Date(co.sentAt).toLocaleString()} — awaiting response.</p>
+                )}
+              </li>
+            ))}
+          </ul>
         )}
       </section>
 

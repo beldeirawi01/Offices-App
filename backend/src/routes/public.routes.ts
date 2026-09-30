@@ -1,10 +1,23 @@
 import { Router } from "express";
 import rateLimit from "express-rate-limit";
+import { z } from "zod";
 import { prisma } from "../db/prisma";
 import { HttpError } from "../middleware/errorHandler";
 import { renderInvoicePdf } from "../services/pdf.service";
 
 export const publicRouter = Router();
+
+// A drawn signature as a data URL (e.g. "data:image/png;base64,...") — capped
+// well above what a real canvas-drawn signature needs (a few KB) but far
+// below anything that could be used to stuff arbitrary large payloads into
+// this unauthenticated endpoint.
+const signatureSchema = z.object({
+  signerName: z.string().trim().min(1, "Please type your name to sign").max(200),
+  signatureImage: z
+    .string()
+    .startsWith("data:image/", "Signature must be a drawn image")
+    .max(300_000, "Signature image is too large"),
+});
 
 // Unauthenticated by design (clients have no account), so keep this tightly
 // rate-limited to blunt token-guessing/enumeration attempts.
@@ -78,6 +91,10 @@ publicRouter.get("/quotes/:token", async (req, res) => {
   });
 });
 
+// Accepting a quote is the moment it becomes a binding agreement to do the
+// work at this price, so it requires an e-signature — a typed name plus a
+// drawn signature captured on the public page — rather than a bare button
+// click.
 publicRouter.post("/quotes/:token/accept", async (req, res) => {
   const quote = await prisma.quote.findUnique({ where: { publicToken: req.params.token } });
   if (!quote) throw new HttpError(404, "Quote not found");
@@ -87,10 +104,21 @@ publicRouter.post("/quotes/:token/accept", async (req, res) => {
   if (isQuoteLinkExpired(quote.sentAt)) {
     throw new HttpError(410, "This quote has expired. Please contact the business for updated pricing.");
   }
-  const updated = await prisma.quote.update({
-    where: { id: quote.id },
-    data: { status: "ACCEPTED", respondedAt: new Date() },
-  });
+  // Validated after the state checks above, so an already-responded-to or
+  // expired quote gets that specific error rather than a generic "missing
+  // signature" one regardless of what the request body happened to contain.
+  const body = signatureSchema.parse(req.body);
+  const [updated] = await prisma.$transaction([
+    prisma.quote.update({ where: { id: quote.id }, data: { status: "ACCEPTED", respondedAt: new Date() } }),
+    prisma.signature.create({
+      data: {
+        quoteId: quote.id,
+        signerName: body.signerName,
+        signatureImage: body.signatureImage,
+        ipAddress: req.ip,
+      },
+    }),
+  ]);
   res.json({ status: updated.status });
 });
 
@@ -105,6 +133,64 @@ publicRouter.post("/quotes/:token/decline", async (req, res) => {
   }
   const updated = await prisma.quote.update({
     where: { id: quote.id },
+    data: { status: "DECLINED", respondedAt: new Date() },
+  });
+  res.json({ status: updated.status });
+});
+
+// Client-facing change-order view — a scope/price addition discovered
+// mid-job that needs sign-off before it's binding (see ChangeOrder in
+// schema.prisma for why this doesn't touch any invoice automatically).
+publicRouter.get("/change-orders/:token", async (req, res) => {
+  const changeOrder = await prisma.changeOrder.findUnique({
+    where: { publicToken: req.params.token },
+    include: { organization: { select: { name: true } }, job: { select: { title: true, client: { select: { name: true } } } } },
+  });
+  if (!changeOrder) throw new HttpError(404, "Change order not found");
+
+  res.json({
+    description: changeOrder.description,
+    amount: changeOrder.amount,
+    status: changeOrder.status,
+    createdAt: changeOrder.createdAt,
+    organizationName: changeOrder.organization.name,
+    clientName: changeOrder.job.client.name,
+    jobTitle: changeOrder.job.title,
+  });
+});
+
+// Approving is the client's sign-off that this additional work/cost is
+// authorized — same e-signature requirement as accepting a quote.
+publicRouter.post("/change-orders/:token/approve", async (req, res) => {
+  const changeOrder = await prisma.changeOrder.findUnique({ where: { publicToken: req.params.token } });
+  if (!changeOrder) throw new HttpError(404, "Change order not found");
+  if (changeOrder.status !== "PENDING") {
+    throw new HttpError(400, `This change order can no longer be responded to (currently ${changeOrder.status.toLowerCase()})`);
+  }
+  const body = signatureSchema.parse(req.body);
+
+  const [updated] = await prisma.$transaction([
+    prisma.changeOrder.update({ where: { id: changeOrder.id }, data: { status: "APPROVED", respondedAt: new Date() } }),
+    prisma.signature.create({
+      data: {
+        changeOrderId: changeOrder.id,
+        signerName: body.signerName,
+        signatureImage: body.signatureImage,
+        ipAddress: req.ip,
+      },
+    }),
+  ]);
+  res.json({ status: updated.status });
+});
+
+publicRouter.post("/change-orders/:token/decline", async (req, res) => {
+  const changeOrder = await prisma.changeOrder.findUnique({ where: { publicToken: req.params.token } });
+  if (!changeOrder) throw new HttpError(404, "Change order not found");
+  if (changeOrder.status !== "PENDING") {
+    throw new HttpError(400, `This change order can no longer be responded to (currently ${changeOrder.status.toLowerCase()})`);
+  }
+  const updated = await prisma.changeOrder.update({
+    where: { id: changeOrder.id },
     data: { status: "DECLINED", respondedAt: new Date() },
   });
   res.json({ status: updated.status });

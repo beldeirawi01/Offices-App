@@ -88,7 +88,9 @@ describe("quotes", () => {
     expect(view.status).toBe(200);
     expect(view.body.quoteNumber).toBe(quote.quoteNumber);
 
-    const accept = await request(app).post(`/api/public/quotes/${quote.publicToken}/accept`);
+    const accept = await request(app)
+      .post(`/api/public/quotes/${quote.publicToken}/accept`)
+      .send({ signerName: "Pat Client", signatureImage: "data:image/png;base64,aGVsbG8=" });
     expect(accept.status).toBe(200);
     expect(accept.body.status).toBe("ACCEPTED");
   });

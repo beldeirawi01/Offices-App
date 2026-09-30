@@ -4,22 +4,19 @@ import { publicApi } from "../api/client";
 import Spinner from "../components/Spinner";
 import SignatureCanvas from "../components/SignatureCanvas";
 
-interface PublicQuoteData {
-  quoteNumber: string;
-  status: string;
+interface PublicChangeOrderData {
+  description: string;
+  amount: number;
+  status: "PENDING" | "APPROVED" | "DECLINED";
   createdAt: string;
   organizationName: string;
   clientName: string;
-  lineItems: { description: string; quantity: number; unitPrice: number; amount: number }[];
-  subtotal: number;
-  tax: number;
-  total: number;
-  notes: string | null;
+  jobTitle: string;
 }
 
-export default function PublicQuote() {
+export default function PublicChangeOrder() {
   const { token } = useParams();
-  const [quote, setQuote] = useState<PublicQuoteData | null>(null);
+  const [changeOrder, setChangeOrder] = useState<PublicChangeOrderData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [responding, setResponding] = useState(false);
   const [signing, setSigning] = useState(false);
@@ -28,9 +25,9 @@ export default function PublicQuote() {
 
   const load = () => {
     publicApi
-      .get<PublicQuoteData>(`/public/quotes/${token}`)
-      .then((res) => setQuote(res.data))
-      .catch(() => setError("We couldn't find this quote. The link may be incorrect or expired."));
+      .get<PublicChangeOrderData>(`/public/change-orders/${token}`)
+      .then((res) => setChangeOrder(res.data))
+      .catch(() => setError("We couldn't find this change order. The link may be incorrect."));
   };
 
   useEffect(load, [token]);
@@ -38,7 +35,7 @@ export default function PublicQuote() {
   const onDecline = async () => {
     setResponding(true);
     try {
-      await publicApi.post(`/public/quotes/${token}/decline`);
+      await publicApi.post(`/public/change-orders/${token}/decline`);
       load();
     } catch (err: any) {
       setError(err?.response?.data?.error ?? "Could not submit your response — please try again.");
@@ -47,16 +44,16 @@ export default function PublicQuote() {
     }
   };
 
-  const onAccept = async (e: FormEvent) => {
+  const onApprove = async (e: FormEvent) => {
     e.preventDefault();
     if (!signatureImage) {
-      setError("Please draw your signature before accepting.");
+      setError("Please draw your signature before approving.");
       return;
     }
     setError(null);
     setResponding(true);
     try {
-      await publicApi.post(`/public/quotes/${token}/accept`, { signerName, signatureImage });
+      await publicApi.post(`/public/change-orders/${token}/approve`, { signerName, signatureImage });
       load();
     } catch (err: any) {
       setError(err?.response?.data?.error ?? "Could not submit your response — please try again.");
@@ -75,10 +72,10 @@ export default function PublicQuote() {
     );
   }
 
-  if (!quote) {
+  if (!changeOrder) {
     return (
       <div className="public-invoice-page">
-        <Spinner label="Loading quote..." />
+        <Spinner label="Loading change order..." />
       </div>
     );
   }
@@ -87,71 +84,40 @@ export default function PublicQuote() {
     <div className="public-invoice-page">
       <div className="public-invoice-card">
         <div className="public-invoice-header">
-          <h1>{quote.organizationName}</h1>
-          <span className={`badge badge-${quote.status.toLowerCase()}`}>{quote.status.toLowerCase()}</span>
+          <h1>{changeOrder.organizationName}</h1>
+          <span className={`badge badge-${changeOrder.status.toLowerCase()}`}>{changeOrder.status.toLowerCase()}</span>
         </div>
         <p className="muted">
-          Quote {quote.quoteNumber} for {quote.clientName}
+          Change order for "{changeOrder.jobTitle}" — {changeOrder.clientName}
         </p>
 
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>Description</th>
-              <th>Qty</th>
-              <th>Unit price</th>
-              <th>Amount</th>
-            </tr>
-          </thead>
-          <tbody>
-            {quote.lineItems.map((item, i) => (
-              <tr key={i}>
-                <td>{item.description}</td>
-                <td>{item.quantity}</td>
-                <td>${item.unitPrice.toFixed(2)}</td>
-                <td>${item.amount.toFixed(2)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <div className="panel">
+          <h2>What's changing</h2>
+          <p>{changeOrder.description}</p>
+        </div>
 
         <div className="invoice-totals">
-          <div>
-            <span>Subtotal</span>
-            <span>${quote.subtotal.toFixed(2)}</span>
-          </div>
-          <div>
-            <span>Tax</span>
-            <span>${quote.tax.toFixed(2)}</span>
-          </div>
           <div className="total-row">
-            <span>Total (estimated)</span>
-            <span>${quote.total.toFixed(2)}</span>
+            <span>Additional cost</span>
+            <span>${changeOrder.amount.toFixed(2)}</span>
           </div>
         </div>
 
-        {quote.notes && (
-          <div className="panel">
-            <h2>Notes</h2>
-            <p>{quote.notes}</p>
-          </div>
-        )}
-
         <div className="public-invoice-actions">
-          {quote.status === "SENT" && !signing && (
+          {changeOrder.status === "PENDING" && !signing && (
             <div className="button-stack" style={{ width: "100%" }}>
               <button type="button" onClick={() => setSigning(true)} disabled={responding}>
-                Accept this quote
+                Approve this change
               </button>
               <button type="button" className="btn-secondary" onClick={onDecline} disabled={responding}>
                 Decline
               </button>
             </div>
           )}
-          {quote.status === "SENT" && signing && (
-            <form onSubmit={onAccept} className="form-card" style={{ width: "100%" }}>
+          {changeOrder.status === "PENDING" && signing && (
+            <form onSubmit={onApprove} className="form-card" style={{ width: "100%" }}>
               <p className="muted small">
-                Accepting is a binding agreement to have this work done at this price. Type your name and sign below.
+                Approving authorizes this additional work and cost. Type your name and sign below.
               </p>
               <label>
                 Your full name
@@ -161,7 +127,7 @@ export default function PublicQuote() {
               <SignatureCanvas onChange={setSignatureImage} />
               <div className="button-row" style={{ marginTop: 12 }}>
                 <button type="submit" disabled={responding}>
-                  {responding ? "Submitting..." : "Sign and accept"}
+                  {responding ? "Submitting..." : "Sign and approve"}
                 </button>
                 <button type="button" className="btn-secondary" onClick={() => setSigning(false)} disabled={responding}>
                   Cancel
@@ -169,10 +135,10 @@ export default function PublicQuote() {
               </div>
             </form>
           )}
-          {quote.status === "ACCEPTED" && (
-            <p className="consent-yes">✓ You've accepted this quote. We'll be in touch to schedule the work.</p>
+          {changeOrder.status === "APPROVED" && (
+            <p className="consent-yes">✓ You've approved this change order.</p>
           )}
-          {quote.status === "DECLINED" && <p className="consent-no">You've declined this quote.</p>}
+          {changeOrder.status === "DECLINED" && <p className="consent-no">You've declined this change order.</p>}
         </div>
       </div>
     </div>

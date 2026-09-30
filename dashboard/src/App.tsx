@@ -22,6 +22,7 @@ import Team from "./pages/Team";
 import Settings from "./pages/Settings";
 import PublicInvoice from "./pages/PublicInvoice";
 import PublicQuote from "./pages/PublicQuote";
+import PublicChangeOrder from "./pages/PublicChangeOrder";
 import { TermsOfService, PrivacyPolicy } from "./pages/Legal";
 
 function ProtectedRoute({ children }: { children: JSX.Element }) {
@@ -45,6 +46,7 @@ export default function App() {
               <Route path="/privacy" element={<PrivacyPolicy />} />
               <Route path="/pay/:token" element={<PublicInvoice />} />
               <Route path="/quotes/view/:token" element={<PublicQuote />} />
+              <Route path="/change-orders/view/:token" element={<PublicChangeOrder />} />
               <Route
                 path="/"
                 element={

@@ -133,6 +133,19 @@ export interface Job {
   rebookingReminderSentAt?: string | null;
 }
 
+export interface ChangeOrder {
+  id: string;
+  jobId: string;
+  description: string;
+  amount: number;
+  status: "PENDING" | "APPROVED" | "DECLINED";
+  publicToken: string;
+  sentAt: string | null;
+  respondedAt: string | null;
+  createdAt: string;
+  signature?: { signerName: string; signedAt: string } | null;
+}
+
 export interface Organization {
   id: string;
   name: string;
