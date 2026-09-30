@@ -11,6 +11,9 @@ coverage/
 web-build/
 backend/uploads/
 backend/backups/
+test-results/
+playwright-report/
+blob-report/
 *.pem
 .vscode/*
 !.vscode/settings.json
