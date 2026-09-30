@@ -33,6 +33,8 @@ export default function Settings() {
 
   const [stripeLoading, setStripeLoading] = useState(false);
   const [subscriptionLoading, setSubscriptionLoading] = useState(false);
+  const [quickbooksLoading, setQuickbooksLoading] = useState(false);
+  const [quickbooksSyncing, setQuickbooksSyncing] = useState(false);
 
   const [reviewRequestEnabled, setReviewRequestEnabled] = useState(true);
   const [reviewRequestDelayDays, setReviewRequestDelayDays] = useState("3");
@@ -85,6 +87,24 @@ export default function Settings() {
         );
       })
       .catch(() => toast.error("Could not confirm your Stripe account status."));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
+
+  // Landed back here after Intuit's OAuth consent screen — the backend's
+  // callback route already stored the tokens before redirecting here, so
+  // this just needs to re-fetch to pick up the new connected state.
+  useEffect(() => {
+    const quickbooksResult = searchParams.get("quickbooks");
+    if (!quickbooksResult) return;
+    setSearchParams({}, { replace: true });
+    if (quickbooksResult === "return") {
+      loadOrg();
+      toast.success("QuickBooks connected.");
+    } else if (quickbooksResult === "denied") {
+      toast.error("QuickBooks connection was cancelled.");
+    } else {
+      toast.error("Could not connect QuickBooks — please try again.");
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
 
@@ -147,6 +167,52 @@ export default function Settings() {
       window.open(data.url, "_blank", "noreferrer");
     } catch (err: any) {
       toast.error(err?.response?.data?.error ?? "Could not open the Stripe dashboard");
+    }
+  };
+
+  const onConnectQuickbooks = async () => {
+    setQuickbooksLoading(true);
+    try {
+      const { data } = await api.post<{ url: string }>("/organizations/me/quickbooks/connect");
+      window.location.href = data.url;
+    } catch (err: any) {
+      toast.error(err?.response?.data?.error ?? "Could not start QuickBooks connection");
+      setQuickbooksLoading(false);
+    }
+  };
+
+  const onDisconnectQuickbooks = async () => {
+    const ok = await confirm({
+      title: "Disconnect QuickBooks?",
+      message: "New invoices will stop syncing to QuickBooks until you reconnect. Already-synced invoices stay in QuickBooks.",
+      confirmLabel: "Disconnect",
+    });
+    if (!ok) return;
+    setQuickbooksLoading(true);
+    try {
+      await api.post("/organizations/me/quickbooks/disconnect");
+      loadOrg();
+      toast.success("QuickBooks disconnected.");
+    } catch (err: any) {
+      toast.error(err?.response?.data?.error ?? "Could not disconnect QuickBooks");
+    } finally {
+      setQuickbooksLoading(false);
+    }
+  };
+
+  const onSyncQuickbooks = async () => {
+    setQuickbooksSyncing(true);
+    try {
+      const { data } = await api.post<{ synced: number; failed: number }>("/organizations/me/quickbooks/sync");
+      if (data.failed > 0) {
+        toast.error(`Synced ${data.synced} invoice(s), ${data.failed} failed — check back after fixing any client/invoice issues.`);
+      } else {
+        toast.success(data.synced > 0 ? `Synced ${data.synced} invoice(s) to QuickBooks.` : "Everything is already synced.");
+      }
+    } catch (err: any) {
+      toast.error(err?.response?.data?.error ?? "Could not sync QuickBooks");
+    } finally {
+      setQuickbooksSyncing(false);
     }
   };
 
@@ -400,6 +466,46 @@ export default function Settings() {
             <div className="button-row">
               <button type="button" onClick={onConnectStripe} disabled={stripeLoading}>
                 {stripeLoading ? "Redirecting..." : org.stripeAccountId ? "Continue setup" : "Connect with Stripe"}
+              </button>
+            </div>
+          </div>
+        )}
+      </section>
+
+      <section className="panel">
+        <h2>QuickBooks</h2>
+        {!isOwner ? (
+          <p className="muted">Only the business owner can manage the QuickBooks connection.</p>
+        ) : !org ? (
+          <p className="muted">Loading...</p>
+        ) : org.quickbooksConnected ? (
+          <div className="form-card">
+            <p className="consent-yes">
+              <CheckCircleIcon width={16} height={16} /> Connected
+              {org.quickbooksConnectedAt ? ` since ${new Date(org.quickbooksConnectedAt).toLocaleDateString()}` : ""}.
+            </p>
+            <p className="muted small">
+              Sent and paid invoices sync to QuickBooks automatically. Use "Sync now" to catch up anything from before
+              you connected, or to retry after an error.
+            </p>
+            <div className="button-row">
+              <button type="button" className="btn-secondary" onClick={onSyncQuickbooks} disabled={quickbooksSyncing}>
+                {quickbooksSyncing ? "Syncing..." : "Sync now"}
+              </button>
+              <button type="button" className="btn-danger" onClick={onDisconnectQuickbooks} disabled={quickbooksLoading}>
+                {quickbooksLoading ? "Disconnecting..." : "Disconnect"}
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="form-card">
+            <p className="muted">
+              Connect QuickBooks Online to automatically sync your clients as customers and your sent/paid invoices —
+              no more re-entering them for your bookkeeping.
+            </p>
+            <div className="button-row">
+              <button type="button" onClick={onConnectQuickbooks} disabled={quickbooksLoading}>
+                {quickbooksLoading ? "Redirecting..." : "Connect QuickBooks"}
               </button>
             </div>
           </div>

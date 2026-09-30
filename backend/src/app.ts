@@ -22,6 +22,7 @@ import { usersRouter } from "./routes/users.routes";
 import { publicRouter } from "./routes/public.routes";
 import { organizationsRouter } from "./routes/organizations.routes";
 import { twilioRouter } from "./routes/twilio.routes";
+import { connectOrganization, verifyOAuthState } from "./services/quickbooks.service";
 
 export const app = express();
 
@@ -85,6 +86,39 @@ app.use("/api/invoices", invoicesRouter);
 app.use("/api/quotes", quotesRouter);
 app.use("/api/reports", reportsRouter);
 app.use("/api/users", usersRouter);
+// Intuit's OAuth redirect lands here as a plain browser GET with no
+// Authorization header, so it's mounted directly on the app rather than on
+// organizationsRouter (which requires auth for every route). The `state`
+// query param — a signed JWT minted in quickbooks.service.ts — is what
+// identifies which organization's "Connect" click this is answering.
+app.get("/api/organizations/me/quickbooks/callback", async (req, res) => {
+  const { code, realmId, state, error } = req.query;
+  if (typeof state !== "string") {
+    return res.status(400).send("Missing or invalid QuickBooks connection request.");
+  }
+
+  let organizationId: string;
+  try {
+    organizationId = verifyOAuthState(state);
+  } catch {
+    return res
+      .status(400)
+      .send("This QuickBooks connection link has expired or is invalid — please try connecting again from Settings.");
+  }
+
+  if (error || typeof code !== "string" || typeof realmId !== "string") {
+    return res.redirect(`${env.appBaseUrl}/settings?quickbooks=denied`);
+  }
+
+  try {
+    await connectOrganization(organizationId, code, realmId);
+    res.redirect(`${env.appBaseUrl}/settings?quickbooks=return`);
+  } catch (err) {
+    console.error(`QuickBooks OAuth callback failed for org ${organizationId}`, err);
+    res.redirect(`${env.appBaseUrl}/settings?quickbooks=error`);
+  }
+});
+
 app.use("/api/organizations", organizationsRouter);
 app.use("/api/public", publicRouter);
 

@@ -3,6 +3,7 @@ import Stripe from "stripe";
 import { Prisma } from "@prisma/client";
 import { prisma } from "../db/prisma";
 import { verifyStripeWebhook, verifyStripeConnectWebhook, mapStripeSubscriptionStatus } from "../services/payment.service";
+import { syncInvoiceBestEffort, syncInvoicePaymentBestEffort } from "../services/quickbooksSync.service";
 
 function isUniqueConstraintError(err: unknown): boolean {
   return err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002";
@@ -138,6 +139,13 @@ async function applyStripeEvent(event: Stripe.Event) {
       stripePaymentIntentId: paymentIntentId,
     },
   });
+
+  // Fire-and-forget — awaiting here would hold up the webhook response
+  // (Stripe expects a fast 2xx) for what's already a best-effort side
+  // effect. Both no-op instantly if this org hasn't connected QuickBooks.
+  syncInvoiceBestEffort(invoiceId)
+    .then(() => syncInvoicePaymentBestEffort(invoiceId))
+    .catch(() => {});
 }
 
 // Stripe requires the raw body for signature verification; this route is

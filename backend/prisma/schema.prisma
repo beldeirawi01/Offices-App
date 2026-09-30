@@ -112,6 +112,26 @@ model Organization {
   invoiceSequence Int @default(0)
   quoteSequence   Int @default(0)
 
+  // QuickBooks Online — set once the owner completes Intuit's OAuth
+  // authorization from Settings. `quickbooksRealmId` identifies which QBO
+  // company file (Intuit's term for a business's set of books) this org is
+  // connected to; tokens are refreshed automatically before each API call
+  // (see quickbooks.service.ts) and `quickbooksTokenExpiresAt` tracks the
+  // access token's own short (1hr) expiry, not the longer-lived refresh
+  // token's.
+  quickbooksRealmId         String?
+  quickbooksAccessToken     String?
+  quickbooksRefreshToken    String?
+  quickbooksTokenExpiresAt  DateTime?
+  quickbooksConnectedAt     DateTime?
+  // A single generic "Jobscribe Services" catalog Item, created once in the
+  // connected QBO company the first time an invoice syncs and reused after
+  // that — every QBO invoice line has to reference a catalog Item, but
+  // Jobscribe has no pricebook of its own to map line items to real QBO
+  // items, so this one generic item stands in for all of them (the actual
+  // description still carries over per line).
+  quickbooksDefaultItemId   String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -156,6 +176,10 @@ model Client {
   // Owner-controlled opt-out of automatic review requests and rebooking
   // reminders for this specific client, without turning them off org-wide.
   followUpsEnabled Boolean    @default(true)
+  // Set the first time this client is pushed to QuickBooks (as a QBO
+  // Customer) — reused on every later push instead of creating a duplicate
+  // customer each time.
+  quickbooksCustomerId String?
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
 
@@ -293,6 +317,16 @@ model Invoice {
   reviewRequestSentAt DateTime?
   stripePaymentLinkId String?
   stripePaymentLinkUrl String?
+  // Set once this invoice has been pushed to QuickBooks as a QBO Invoice —
+  // reused on later pushes (e.g. after a line-item edit) instead of creating
+  // a duplicate. `quickbooksPaymentId` is set separately once paid, since a
+  // QBO Invoice and a QBO Payment are different object types there.
+  quickbooksInvoiceId  String?
+  quickbooksPaymentId  String?
+  quickbooksSyncedAt   DateTime?
+  // Kept even after a later successful sync overwrites it — cleared to null
+  // to keep this only meaningful for the current attempt.
+  quickbooksSyncError  String?
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
 

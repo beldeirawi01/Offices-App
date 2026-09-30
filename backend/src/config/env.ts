@@ -78,6 +78,16 @@ export const env = {
   // 1000/month is generous for even a busy multi-tech shop while still
   // capping exposure; raise it per-deployment if a real business needs more.
   maxVoiceUploadsPerOrgPerMonth: Number(process.env.MAX_VOICE_UPLOADS_PER_ORG_PER_MONTH ?? 1000),
+
+  // QuickBooks Online — lets a business push its clients/invoices/payments
+  // into their own QBO company file. Created once in the Intuit Developer
+  // dashboard (an "app"), not by this codebase.
+  quickbooksClientId: process.env.QUICKBOOKS_CLIENT_ID ?? "",
+  quickbooksClientSecret: process.env.QUICKBOOKS_CLIENT_SECRET ?? "",
+  // "sandbox" or "production" — selects both the OAuth discovery document and
+  // the API host (Intuit runs entirely separate sandbox vs. production
+  // environments, not just different credentials against one host).
+  quickbooksEnvironment: process.env.QUICKBOOKS_ENVIRONMENT ?? "sandbox",
 };
 
 /**

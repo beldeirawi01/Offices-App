@@ -149,6 +149,8 @@ export interface Organization {
   subscriptionStatus: "TRIALING" | "ACTIVE" | "PAST_DUE" | "CANCELED" | "INCOMPLETE";
   trialEndsAt: string | null;
   subscriptionCurrentPeriodEnd: string | null;
+  quickbooksConnected: boolean;
+  quickbooksConnectedAt: string | null;
 }
 
 export interface Tech {

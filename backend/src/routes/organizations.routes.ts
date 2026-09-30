@@ -16,13 +16,26 @@ import {
   createBillingPortalLink,
   cancelSubscription,
 } from "../services/payment.service";
+import { getAuthorizationUrl, disconnectOrganization, isQuickbooksConfigured } from "../services/quickbooks.service";
+import { syncUnsyncedInvoices } from "../services/quickbooksSync.service";
 
 export const organizationsRouter = Router();
 organizationsRouter.use(requireAuth);
 
+// The org row now carries QuickBooks OAuth tokens (see quickbooks.service.ts)
+// — real bearer credentials, not business data, so they're stripped from
+// every response that serializes an Organization rather than trusted to
+// never accidentally leak to the dashboard/a network inspector/an export file.
+function toSafeOrganization<T extends { quickbooksAccessToken?: string | null; quickbooksRefreshToken?: string | null }>(
+  org: T,
+) {
+  const { quickbooksAccessToken, quickbooksRefreshToken, ...safe } = org;
+  return { ...safe, quickbooksConnected: Boolean(quickbooksAccessToken) };
+}
+
 organizationsRouter.get("/me", async (req, res) => {
   const org = await prisma.organization.findUniqueOrThrow({ where: { id: req.auth!.organizationId } });
-  res.json(org);
+  res.json(toSafeOrganization(org));
 });
 
 const validTimezones = new Set(Intl.supportedValuesOf("timeZone"));
@@ -53,7 +66,7 @@ organizationsRouter.put("/me", requireOwner, async (req, res) => {
       timezone: body.timezone,
     },
   });
-  res.json(org);
+  res.json(toSafeOrganization(org));
 });
 
 // Kicks off (or resumes) Stripe's hosted onboarding for this business's own
@@ -93,7 +106,7 @@ organizationsRouter.post("/me/stripe/refresh-status", requireOwner, async (req, 
       stripeDetailsSubmitted: status.detailsSubmitted,
     },
   });
-  res.json(updated);
+  res.json(toSafeOrganization(updated));
 });
 
 // A link into the business's own Stripe Express dashboard (payouts,
@@ -138,6 +151,30 @@ organizationsRouter.get("/me/subscription/portal", requireOwner, async (req, res
   res.json({ url });
 });
 
+// Kicks off Intuit's hosted OAuth consent screen. The redirect back
+// (GET /api/organizations/me/quickbooks/callback) is mounted directly on
+// the app, not on this router, since it's an unauthenticated browser
+// redirect with no Authorization header — see app.ts.
+organizationsRouter.post("/me/quickbooks/connect", requireOwner, async (req, res) => {
+  if (!isQuickbooksConfigured()) throw new HttpError(400, "QuickBooks integration is not configured on this server");
+  const url = getAuthorizationUrl(req.auth!.organizationId);
+  res.json({ url });
+});
+
+organizationsRouter.post("/me/quickbooks/disconnect", requireOwner, async (req, res) => {
+  await disconnectOrganization(req.auth!.organizationId);
+  res.status(204).send();
+});
+
+// Catches up anything not yet pushed (or that failed on an earlier attempt)
+// — the normal path is automatic on invoice send/mark-paid (see
+// invoices.routes.ts), this is for a first connect or recovering from an
+// earlier outage.
+organizationsRouter.post("/me/quickbooks/sync", requireOwner, async (req, res) => {
+  const result = await syncUnsyncedInvoices(req.auth!.organizationId);
+  res.json(result);
+});
+
 // A full export of everything this business has stored in Jobscribe — the
 // "right to access" half of a GDPR-style data request. Deliberately excludes
 // the actual photo/audio binary content (storage keys are included as
@@ -168,7 +205,7 @@ organizationsRouter.get("/me/export", requireOwner, async (req, res) => {
   ]);
 
   res.setHeader("Content-Disposition", `attachment; filename="jobscribe-export-${organizationId}.json"`);
-  res.json({ exportedAt: new Date().toISOString(), organization, users, clients, jobs });
+  res.json({ exportedAt: new Date().toISOString(), organization: toSafeOrganization(organization), users, clients, jobs });
 });
 
 const deleteAccountSchema = z.object({ password: z.string().min(1) });

@@ -10,6 +10,7 @@ import { deliverInvoiceToClient } from "../services/notification.service";
 import { renderInvoicePdf } from "../services/pdf.service";
 import { createInvoiceFromLineItems, DraftLineItem } from "../services/invoice.service";
 import { lineItemAmount, sumMoney, calculateTax } from "../utils/money";
+import { syncInvoiceBestEffort, syncInvoicePaymentBestEffort } from "../services/quickbooksSync.service";
 
 export const invoicesRouter = Router();
 invoicesRouter.use(requireAuth);
@@ -259,6 +260,11 @@ invoicesRouter.post("/:id/send", async (req, res) => {
   });
 
   res.json({ invoice: updated, deliveryResults });
+
+  // No-ops instantly if this org hasn't connected QuickBooks — never blocks
+  // the response either way, and any failure is recorded on the invoice
+  // rather than surfaced here.
+  syncInvoiceBestEffort(invoice.id).catch(() => {});
 });
 
 invoicesRouter.post("/:id/void", async (req, res) => {
@@ -299,4 +305,12 @@ invoicesRouter.post("/:id/mark-paid", async (req, res) => {
   ]);
 
   res.json(invoice);
+
+  // Marking paid can happen straight from DRAFT (a cash job that was never
+  // "sent" digitally at all), so the invoice itself might not be in
+  // QuickBooks yet — sync it first, then the payment. Both no-op instantly
+  // if this org hasn't connected QuickBooks.
+  syncInvoiceBestEffort(invoice.id)
+    .then(() => syncInvoicePaymentBestEffort(invoice.id))
+    .catch(() => {});
 });
