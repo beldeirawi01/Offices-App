@@ -6,106 +6,171 @@
 <title>Baraa Eldeirawi Portfolio</title>
 <meta name="description" content="Portfolio of Baraa Eldeirawi: Computer Science student focused on QA, test automation (Playwright, TypeScript) and IT support.">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
 <style>
-/* Layout: pinned identity column on the left, work scrolls on the right. Monochrome with one green accent, like a passing test. */
-:root{--bg:#ffffff;--surface:#f6f6f4;--ink:#141414;--muted:#6a6a66;--line:#e4e4e0;--accent:#0b7a4b;--accent-soft:#e3f4ec;
---sans:"Inter",system-ui,-apple-system,"Segoe UI",sans-serif;--mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace}
-@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#101110;--surface:#181a18;--ink:#f1f1ee;--muted:#9b9b95;--line:#2a2c2a;--accent:#4fd49a;--accent-soft:#16291f;color-scheme:dark}}
-:root[data-theme="dark"]{--bg:#101110;--surface:#181a18;--ink:#f1f1ee;--muted:#9b9b95;--line:#2a2c2a;--accent:#4fd49a;--accent-soft:#16291f;color-scheme:dark}
-*{box-sizing:border-box}html{scroll-behavior:smooth}
-body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.65 var(--sans);-webkit-font-smoothing:antialiased}
-a{color:inherit;text-decoration-color:var(--line);text-underline-offset:3px}a:hover{text-decoration-color:var(--accent);color:var(--accent)}
-code{font-family:var(--mono);font-size:.86em;background:var(--surface);padding:1px 6px;border-radius:4px}
-.page{max-width:1120px;margin:0 auto;padding-inline:20px;display:grid;grid-template-columns:300px minmax(0,1fr);gap:72px}
-aside{position:sticky;top:0;align-self:start;height:100vh;padding-block:56px;display:flex;flex-direction:column;gap:28px}
-aside h1{font-size:30px;line-height:1.15;letter-spacing:-.025em;margin:0;font-weight:700}
-.role{font-family:var(--mono);font-size:13px;color:var(--accent);margin:8px 0 0}
-aside p{color:var(--muted);margin:0;font-size:15px}
-.side-nav{display:flex;flex-direction:column;gap:2px;margin-top:4px}
-.side-nav a{text-decoration:none;color:var(--muted);font-size:14px;padding:4px 0;display:flex;gap:10px;align-items:center}
-.side-nav a::before{content:"";width:14px;height:1px;background:var(--line);transition:.2s}
-.side-nav a:hover{color:var(--ink)}.side-nav a:hover::before{width:26px;background:var(--accent)}
-.links{margin-top:auto;display:flex;flex-direction:column;gap:6px;font-size:14px;font-family:var(--mono)}
-.links a{text-decoration:none}.links a:hover{color:var(--accent)}
-main{padding-block:56px 40px;min-width:0}
-section{margin-bottom:72px}
-.label{font-family:var(--mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0 0 28px;display:flex;align-items:center;gap:12px}
-.label::after{content:"";flex:1;height:1px;background:var(--line)}
-.intro{font-size:clamp(22px,3vw,30px);line-height:1.35;letter-spacing:-.02em;font-weight:500;margin:0 0 20px;text-wrap:balance}
-.intro em{font-style:normal;color:var(--accent)}
-.facts{display:flex;flex-wrap:wrap;gap:8px 24px;font-family:var(--mono);font-size:13px;color:var(--muted);margin:0;padding:0;list-style:none}
-.facts b{color:var(--ink);font-weight:500}
-.project{padding-block:8px 8px;margin-bottom:56px}
-.project:last-child{margin-bottom:0}
-.project h3{font-size:24px;letter-spacing:-.02em;margin:0 0 4px;font-weight:650}
-.tech{font-family:var(--mono);font-size:13px;color:var(--muted);margin:0 0 16px}
-.project p{margin:0 0 14px;max-width:66ch}
-.pts{margin:0 0 18px;padding:0;list-style:none;max-width:66ch}
-.pts li{position:relative;padding-left:22px;margin-bottom:8px}
-.pts li::before{content:"";position:absolute;left:2px;top:.72em;width:8px;height:2px;background:var(--accent)}
-.tags{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 22px;padding:0;list-style:none}
-.tags li{font-family:var(--mono);font-size:12px;border:1px solid var(--line);padding:2px 9px;border-radius:999px;color:var(--muted)}
-.repo{display:inline-block;font-weight:600;font-size:14px;text-decoration:none;border-bottom:2px solid var(--accent);padding-bottom:1px;margin-bottom:22px}
-.repo:hover{color:var(--accent)}
-.gallery{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;align-items:start}
-figure{margin:0;min-width:0}
-figure a{display:block;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--surface)}
-figure a:hover{border-color:var(--accent)}
-figure img{display:block;width:100%;height:auto}
-figcaption{font-size:13px;color:var(--muted);margin-top:8px;line-height:1.45}
-.note{font-size:13px;color:var(--muted);margin:14px 0 0}
-.rows{display:grid}
-.row{display:grid;grid-template-columns:150px minmax(0,1fr);gap:24px;padding-block:20px;border-top:1px solid var(--line)}
-.row:last-child{border-bottom:1px solid var(--line)}
-.when{font-family:var(--mono);font-size:13px;color:var(--muted);padding-top:3px}
-.row h3{font-size:17px;margin:0;font-weight:600}
-.row .sub{color:var(--muted);font-size:14px;margin:0 0 8px}
-.row ul{margin:0;padding-left:18px;color:var(--ink)}.row li{margin-bottom:4px}
-.row p{margin:0}.row .meta{color:var(--muted);font-size:14px;margin-top:6px}
-.contact-big{display:inline-block;font-size:clamp(22px,3.4vw,34px);letter-spacing:-.02em;font-weight:600;text-decoration:none;border-bottom:3px solid var(--accent);word-break:break-all}
-footer{color:var(--muted);font-size:13px;font-family:var(--mono);padding-block:0 40px}
-@media(max-width:900px){
- .page{grid-template-columns:minmax(0,1fr);gap:0}
- aside{position:static;height:auto;padding-block:40px 8px}
- .side-nav,.links{display:none}
- main{padding-top:24px}
+/* Layout: 12-col-free two-column grid, 288px pinned rail + 704px reading column. Everything sits on a 4px baseline grid (8px for gaps). One green accent. */
+:root{
+  --bg:#ffffff;--surface:#f7f7f5;--ink:#111311;--ink-2:#3b3d3a;--muted:#6b6e69;--line:#e6e7e3;--line-2:#d3d5d0;
+  --accent:#0a7a4a;--accent-ink:#ffffff;--accent-soft:#e6f4ed;
+  --sans:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --r:8px;--gutter:24px;--rail:288px;--gap:80px;
 }
-@media(max-width:620px){.gallery{grid-template-columns:minmax(0,1fr)}.row{grid-template-columns:minmax(0,1fr);gap:4px}}
-@media(prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0e100f;--surface:#161917;--ink:#f2f3f0;--ink-2:#c9cbc6;--muted:#8f938d;--line:#242826;--line-2:#363a37;--accent:#4ad398;--accent-ink:#04140c;--accent-soft:#12271d;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0e100f;--surface:#161917;--ink:#f2f3f0;--ink-2:#c9cbc6;--muted:#8f938d;--line:#242826;--line-2:#363a37;--accent:#4ad398;--accent-ink:#04140c;--accent-soft:#12271d;color-scheme:dark}
+
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:32px}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 16px/24px var(--sans);font-optical-sizing:auto;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;font-variant-numeric:tabular-nums}
+h1,h2,h3,p,ul,figure{margin:0}
+ul{padding:0;list-style:none}
+a{color:inherit;text-decoration:none}
+img{display:block;max-width:100%}
+:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:4px}
+::selection{background:var(--accent-soft);color:var(--ink)}
+code{font:500 13px/1 var(--mono);background:var(--surface);border:1px solid var(--line);padding:2px 6px;border-radius:4px;white-space:nowrap}
+
+/* ---------- frame ---------- */
+.page{max-width:calc(var(--rail) + var(--gap) + 704px + var(--gutter)*2);margin-inline:auto;padding-inline:var(--gutter);display:grid;grid-template-columns:var(--rail) minmax(0,1fr);column-gap:var(--gap)}
+
+/* ---------- rail ---------- */
+.rail{position:sticky;top:0;height:100vh;height:100dvh;align-self:start;padding-block:64px 48px;display:flex;flex-direction:column}
+.name{font:600 32px/40px var(--sans);letter-spacing:-.025em}
+.role{margin-top:8px;font:500 13px/20px var(--mono);color:var(--accent)}
+.bio{margin-top:24px;color:var(--ink-2);font-size:15px;line-height:24px}
+.toc{margin-top:40px;display:grid;gap:0}
+.toc a{display:flex;align-items:center;gap:12px;height:32px;font-size:14px;color:var(--muted);transition:color .15s}
+.toc a::before{content:"";width:16px;height:1px;background:var(--line-2);transition:width .2s,background .2s}
+.toc a:hover,.toc a[aria-current="true"]{color:var(--ink)}
+.toc a:hover::before,.toc a[aria-current="true"]::before{width:32px;background:var(--accent)}
+.rail-links{margin-top:auto;display:grid;gap:4px}
+.rail-links a{font:400 13px/24px var(--mono);color:var(--muted);transition:color .15s}
+.rail-links a:hover{color:var(--accent)}
+
+/* ---------- main ---------- */
+main{padding-block:64px 32px;min-width:0}
+section{padding-top:96px}
+section:first-child{padding-top:0}
+.label{display:flex;align-items:center;gap:16px;font:500 12px/16px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:32px}
+.label::after{content:"";flex:1;height:1px;background:var(--line)}
+
+.lede{font:500 32px/40px var(--sans);letter-spacing:-.025em;text-wrap:balance;max-width:20em}
+.lede em{font-style:normal;color:var(--accent)}
+.lede-sub{margin-top:24px;color:var(--ink-2);max-width:56ch}
+.stats{margin-top:48px;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.stat{padding:20px 24px;border-left:1px solid var(--line)}
+.stat:first-child{border-left:0}
+.stat b{display:block;font:500 24px/32px var(--mono);letter-spacing:-.02em}
+.stat span{display:block;margin-top:4px;font-size:13px;line-height:20px;color:var(--muted)}
+
+/* ---------- projects ---------- */
+.project+.project{margin-top:80px;padding-top:80px;border-top:1px solid var(--line)}
+.project h3{font:600 24px/32px var(--sans);letter-spacing:-.02em}
+.tech{margin-top:4px;font:400 13px/20px var(--mono);color:var(--muted)}
+.project .desc{margin-top:20px;color:var(--ink-2);max-width:62ch}
+.pts{margin-top:20px;display:grid;gap:12px;max-width:62ch}
+.pts li{position:relative;padding-left:24px;color:var(--ink-2)}
+.pts li::before{content:"";position:absolute;left:0;top:12px;width:10px;height:2px;background:var(--accent);border-radius:1px}
+.pts code{vertical-align:1px}
+.tags{margin-top:24px;display:flex;flex-wrap:wrap;gap:8px}
+.tags li{font:400 12px/16px var(--mono);color:var(--muted);border:1px solid var(--line-2);border-radius:999px;padding:3px 10px}
+.repo{margin-top:24px;display:inline-flex;align-items:center;gap:8px;height:40px;padding-inline:16px;font:500 14px/20px var(--sans);color:var(--accent-ink);background:var(--accent);border-radius:var(--r);transition:filter .15s,transform .15s}
+.repo:hover{filter:brightness(1.08);transform:translateY(-1px)}
+.repo span{transition:transform .15s}.repo:hover span{transform:translateX(2px)}
+
+.gallery{margin-top:40px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:24px 16px}
+figure{min-width:0}
+.shot{display:block;width:100%;padding:0;border:1px solid var(--line);border-radius:var(--r);background:var(--surface);overflow:hidden;cursor:zoom-in;aspect-ratio:16/10;transition:border-color .15s,box-shadow .2s,transform .2s}
+.shot img{width:100%;height:100%;object-fit:cover;object-position:top left}
+.shot:hover{border-color:var(--accent);box-shadow:0 8px 24px -8px color-mix(in srgb,var(--ink) 22%,transparent);transform:translateY(-2px)}
+figcaption{margin-top:8px;font-size:13px;line-height:20px;color:var(--muted)}
+.note{margin-top:24px;font-size:13px;line-height:20px;color:var(--muted)}
+
+/* ---------- rows (skills / experience / education) ---------- */
+.rows{border-top:1px solid var(--line)}
+.row{display:grid;grid-template-columns:160px minmax(0,1fr);column-gap:32px;align-items:baseline;padding-block:20px;border-bottom:1px solid var(--line)}
+.k{font:400 13px/24px var(--mono);color:var(--muted)}
+.row h3{font:600 16px/24px var(--sans)}
+.row .sub{color:var(--muted);font-size:14px;line-height:24px}
+.row p,.row li{color:var(--ink-2)}
+.row ul.b{margin-top:8px;display:grid;gap:4px}
+.row ul.b li{position:relative;padding-left:20px}
+.row ul.b li::before{content:"";position:absolute;left:2px;top:12px;width:6px;height:2px;background:var(--line-2)}
+.row .more{margin-top:8px;color:var(--muted);font-size:14px;line-height:24px}
+
+/* ---------- contact ---------- */
+.contact p{color:var(--ink-2);max-width:48ch}
+.mail{margin-top:24px;display:inline-block;font:500 32px/40px var(--sans);letter-spacing:-.025em;border-bottom:2px solid var(--accent);padding-bottom:4px;transition:color .15s;overflow-wrap:anywhere}
+.mail:hover{color:var(--accent)}
+.contact .rail-links{margin-top:24px;display:none}
+footer{margin-top:96px;padding-top:24px;border-top:1px solid var(--line);font:400 12px/16px var(--mono);color:var(--muted)}
+
+/* ---------- viewer ---------- */
+dialog{border:0;padding:0;background:transparent;max-width:min(1200px,calc(100vw - 32px));max-height:calc(100vh - 32px);overflow:visible}
+dialog::backdrop{background:color-mix(in srgb,#000 78%,transparent);backdrop-filter:blur(2px)}
+dialog img{width:100%;height:auto;max-height:calc(100vh - 96px);object-fit:contain;border-radius:var(--r);background:var(--surface)}
+dialog p{margin-top:12px;color:#fff;font-size:14px;line-height:20px;text-align:center}
+dialog button{position:absolute;top:-40px;right:0;height:32px;padding-inline:12px;border:1px solid rgba(255,255,255,.3);background:transparent;color:#fff;border-radius:6px;font:400 13px/1 var(--mono);cursor:pointer}
+dialog button:hover{background:rgba(255,255,255,.12)}
+
+/* ---------- responsive ---------- */
+@media(max-width:1024px){
+  :root{--gap:56px;--rail:248px}
+  .stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .stat:nth-child(3){border-left:0}.stat:nth-child(n+3){border-top:1px solid var(--line)}
+}
+@media(max-width:860px){
+  :root{--gutter:20px}
+  .page{grid-template-columns:minmax(0,1fr)}
+  .rail{position:static;height:auto;padding-block:40px 0}
+  .toc,.rail>.rail-links{display:none}
+  .name{font-size:28px;line-height:36px}
+  .bio{margin-top:16px}
+  main{padding-top:40px}
+  section{padding-top:72px}
+  .lede,.mail{font-size:26px;line-height:34px}
+  .contact .rail-links{display:grid}
+  .project+.project{margin-top:64px;padding-top:64px}
+}
+@media(max-width:560px){
+  .gallery{grid-template-columns:minmax(0,1fr)}
+  .row{grid-template-columns:minmax(0,1fr);row-gap:4px}
+  .stat{padding:16px}
+  .repo{width:100%;justify-content:center}
+}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{transition:none!important;scroll-behavior:auto!important}}
 </style>
 
 </head>
 <body>
 <div class="page">
-<aside>
-  <div>
-    <h1>Baraa Eldeirawi</h1>
-    <p class="role">QA &amp; test automation</p>
-  </div>
-  <p>Computer Science student in Chicago. I build Playwright and TypeScript test frameworks, full-stack apps, and install the network cabling that keeps clinics online.</p>
-  <nav class="side-nav">
+<header class="rail">
+  <h1 class="name">Baraa Eldeirawi</h1>
+  <p class="role">QA &amp; test automation</p>
+  <p class="bio">Computer Science student in Chicago, IL. Bilingual in English and Arabic.</p>
+  <nav class="toc" aria-label="Sections">
     <a href="#work">Work</a>
     <a href="#skills">Skills</a>
     <a href="#experience">Experience</a>
     <a href="#education">Education</a>
     <a href="#contact">Contact</a>
   </nav>
-  <div class="links">
+  <div class="rail-links">
     <a href="https://github.com/beldeirawi01">github.com/beldeirawi01</a>
     <a href="https://linkedin.com/in/baraa-eldeirawi">linkedin.com/in/baraa-eldeirawi</a>
   </div>
-</aside>
+</header>
 
 <main>
-  <section>
-    <p class="intro">I test software so <em>people can trust it.</em> I care about tests that stay readable and keep working when the UI changes.</p>
-    <ul class="facts">
-      <li><b>30</b> automated tests</li>
-      <li><b>3</b> browsers in CI</li>
-      <li><b>B.S. CS</b> UIC, Dec 2026</li>
-      <li>English · Arabic</li>
-    </ul>
+  <section id="intro">
+    <p class="lede">I test software so <em>people can trust it.</em></p>
+    <p class="lede-sub">I write Playwright and TypeScript test frameworks, build full-stack apps, and install the network cabling that keeps clinics online. I care about tests that stay readable and keep working when the UI changes.</p>
+    <div class="stats">
+      <div class="stat"><b>30</b><span>automated tests</span></div>
+      <div class="stat"><b>3</b><span>browsers in CI</span></div>
+      <div class="stat"><b>3</b><span>apps in Jobscribe</span></div>
+      <div class="stat"><b>Dec 2026</b><span>B.S. at UIC</span></div>
+    </div>
   </section>
 
   <section id="work">
@@ -114,7 +179,7 @@ footer{color:var(--muted);font-size:13px;font-family:var(--mono);padding-block:0
     <article class="project" id="saucedemo">
       <h3>SauceDemo Test Automation Framework</h3>
       <p class="tech">Playwright · TypeScript · GitHub Actions</p>
-      <p>A Page Object Model framework that tests the full shopper journey on SauceDemo: login, inventory, cart and checkout. Page objects hold locators and actions, specs hold behavior and assertions, and test data lives in its own folder.</p>
+      <p class="desc">A Page Object Model framework that tests the full shopper journey on SauceDemo: login, inventory, cart and checkout. Page objects hold locators and actions, specs hold behavior and assertions, and test data lives in its own folder.</p>
       <ul class="pts">
         <li>30 tests across login (5), inventory and cart (5) and checkout (20), grouped in nested <code>describe</code> blocks that mirror the UI flow.</li>
         <li>GitHub Actions runs the suite on Chromium, Firefox and WebKit on every push and pull request, and uploads the HTML report.</li>
@@ -122,20 +187,20 @@ footer{color:var(--muted);font-size:13px;font-family:var(--mono);padding-block:0
         <li>Locators use <code>data-test</code> attributes, checked against the real DOM, so styling changes don't break tests.</li>
       </ul>
       <ul class="tags"><li>Page Object Model</li><li>Data-driven</li><li>Cross-browser</li><li>CI/CD</li></ul>
-      <a class="repo" href="https://github.com/beldeirawi01/sauce-demo-playwright-framework">View on GitHub →</a>
+      <a class="repo" href="https://github.com/beldeirawi01/sauce-demo-playwright-framework">View on GitHub <span aria-hidden="true">→</span></a>
       <div class="gallery">
-        <figure><a href="assets/saucedemo-page-object.png"><img src="assets/saucedemo-page-object.png" alt="InventoryPage.ts page object with parameterized addToCart and removeFromCart methods"></a><figcaption>Page object with a parameterized locator for any product</figcaption></figure>
-        <figure><a href="assets/saucedemo-spec.png"><img src="assets/saucedemo-spec.png" alt="inventory.spec.ts showing a data-driven add-multiple-items test"></a><figcaption>Spec with a shared login hook and a count derived from the input array</figcaption></figure>
-        <figure><a href="assets/saucedemo-ci.png"><img src="assets/saucedemo-ci.png" alt="GitHub Actions workflow that runs Playwright tests and uploads the report"></a><figcaption>CI workflow: install, run, upload the report</figcaption></figure>
-        <figure><a href="assets/saucedemo-test-data.png"><img src="assets/saucedemo-test-data.png" alt="CheckoutData.ts with valid and invalid customer profiles"></a><figcaption>Test data kept separate from test logic</figcaption></figure>
+        <figure><button class="shot" type="button" data-src="assets/saucedemo-page-object.png" data-cap="Page object with a parameterized locator for any product"><img src="assets/saucedemo-page-object.png" width="2000" height="1250" alt="InventoryPage.ts page object with parameterized addToCart and removeFromCart methods"></button><figcaption>Page object with a parameterized locator</figcaption></figure>
+        <figure><button class="shot" type="button" data-src="assets/saucedemo-spec.png" data-cap="Spec with a shared login hook and nested describe blocks"><img src="assets/saucedemo-spec.png" width="2000" height="1250" alt="inventory.spec.ts showing a shared login hook and nested describe blocks"></button><figcaption>Spec with a shared login hook</figcaption></figure>
+        <figure><button class="shot" type="button" data-src="assets/saucedemo-ci.png" data-cap="CI workflow: install, run, upload the report"><img src="assets/saucedemo-ci.png" width="2000" height="1250" alt="GitHub Actions workflow that runs Playwright tests and uploads the report"></button><figcaption>CI workflow: install, run, upload the report</figcaption></figure>
+        <figure><button class="shot" type="button" data-src="assets/saucedemo-test-data.png" data-cap="Test data kept separate from test logic"><img src="assets/saucedemo-test-data.png" width="2000" height="1250" alt="CheckoutData.ts with valid and invalid customer profiles"></button><figcaption>Test data kept separate from test logic</figcaption></figure>
       </div>
-      <p class="note">Screenshots are rendered from the repository's source files.</p>
+      <p class="note">Screenshots are rendered from the repository's source files. Select one to enlarge.</p>
     </article>
 
     <article class="project" id="jobscribe">
       <h3>Jobscribe</h3>
       <p class="tech">TypeScript · React · React Native · Express · PostgreSQL</p>
-      <p>A voice-to-invoice app for HVAC, plumbing and electrical techs. A tech records a job note on-site and the app turns it into a draft invoice, so nobody has to type it up later.</p>
+      <p class="desc">A voice-to-invoice app for HVAC, plumbing and electrical techs. A tech records a job note on-site and the app turns it into a draft invoice, so nobody has to type it up later.</p>
       <ul class="pts">
         <li>Full-stack build: Express API, React owner dashboard, Expo mobile app, and Prisma on PostgreSQL.</li>
         <li>Pipeline: audio stored in S3, transcribed with OpenAI Whisper, then billing fields extracted as JSON by the Claude API into a draft invoice.</li>
@@ -143,62 +208,90 @@ footer{color:var(--muted);font-size:13px;font-family:var(--mono);padding-block:0
         <li>Tested with Vitest and Supertest against a real Postgres database, a Playwright end-to-end suite for the dashboard, and Jest for mobile, all running in CI.</li>
       </ul>
       <ul class="tags"><li>Stripe Connect</li><li>Twilio</li><li>Whisper</li><li>Claude API</li><li>Prisma</li><li>Expo</li></ul>
-      <a class="repo" href="https://github.com/beldeirawi01/Offices-App">View on GitHub →</a>
+      <a class="repo" href="https://github.com/beldeirawi01/Offices-App">View on GitHub <span aria-hidden="true">→</span></a>
       <div class="gallery">
-        <figure><a href="assets/jobscribe-dashboard.png"><img src="assets/jobscribe-dashboard.png" alt="Jobscribe owner dashboard showing revenue, balance, job breakdown and busiest days"></a><figcaption>Owner dashboard: revenue, balances, job mix, busiest days</figcaption></figure>
-        <figure><a href="assets/jobscribe-job-detail.png"><img src="assets/jobscribe-job-detail.png" alt="Job detail page with a voice note transcript and linked invoice"></a><figcaption>Job detail: voice-note transcript next to the invoice it produced</figcaption></figure>
-        <figure><a href="assets/jobscribe-invoice-detail.png"><img src="assets/jobscribe-invoice-detail.png" alt="Invoice detail with line items, totals and delivery log"></a><figcaption>Invoice with parts and labor line items and a delivery log</figcaption></figure>
-        <figure><a href="assets/jobscribe-client-invoice.png"><img src="assets/jobscribe-client-invoice.png" alt="Client-facing invoice page with a Pay now button"></a><figcaption>Client-facing invoice page with a Stripe payment link</figcaption></figure>
-        <figure><a href="assets/jobscribe-jobs.png"><img src="assets/jobscribe-jobs.png" alt="Scheduling page listing jobs with status and assigned tech"></a><figcaption>Scheduling with status and assigned tech</figcaption></figure>
-        <figure><a href="assets/jobscribe-invoices.png"><img src="assets/jobscribe-invoices.png" alt="Invoice list with draft, sent, paid and overdue statuses"></a><figcaption>Invoice list across draft, sent, paid and overdue</figcaption></figure>
+        <figure><button class="shot" type="button" data-src="assets/jobscribe-dashboard.png" data-cap="Owner dashboard: revenue, balances, job mix, busiest days"><img src="assets/jobscribe-dashboard.png" width="2880" height="1800" alt="Jobscribe owner dashboard showing revenue, balance, job breakdown and busiest days"></button><figcaption>Owner dashboard: revenue, balances, job mix</figcaption></figure>
+        <figure><button class="shot" type="button" data-src="assets/jobscribe-job-detail.png" data-cap="Job detail: voice-note transcript next to the invoice it produced"><img src="assets/jobscribe-job-detail.png" width="2880" height="1800" alt="Job detail page with a voice note transcript and linked invoice"></button><figcaption>Job detail: transcript next to its invoice</figcaption></figure>
+        <figure><button class="shot" type="button" data-src="assets/jobscribe-invoice-detail.png" data-cap="Invoice with parts and labor line items and a delivery log"><img src="assets/jobscribe-invoice-detail.png" width="2880" height="1800" alt="Invoice detail with line items, totals and delivery log"></button><figcaption>Invoice with line items and a delivery log</figcaption></figure>
+        <figure><button class="shot" type="button" data-src="assets/jobscribe-client-invoice.png" data-cap="Client-facing invoice page with a Stripe payment link"><img src="assets/jobscribe-client-invoice.png" width="2880" height="1800" alt="Client-facing invoice page with a Pay now button"></button><figcaption>Client-facing invoice with a payment link</figcaption></figure>
+        <figure><button class="shot" type="button" data-src="assets/jobscribe-jobs.png" data-cap="Scheduling with status and assigned tech"><img src="assets/jobscribe-jobs.png" width="2880" height="1800" alt="Scheduling page listing jobs with status and assigned tech"></button><figcaption>Scheduling with status and assigned tech</figcaption></figure>
+        <figure><button class="shot" type="button" data-src="assets/jobscribe-invoices.png" data-cap="Invoice list across draft, sent, paid and overdue"><img src="assets/jobscribe-invoices.png" width="2880" height="1800" alt="Invoice list with draft, sent, paid and overdue statuses"></button><figcaption>Invoice list across every status</figcaption></figure>
       </div>
-      <p class="note">Screenshots are the real dashboard running locally with sample data for a fictional business. No customer data is shown.</p>
+      <p class="note">Screenshots are the real dashboard running locally with sample data for a fictional business. No customer data is shown. Select one to enlarge.</p>
     </article>
   </section>
 
   <section id="skills">
     <h2 class="label">Skills</h2>
     <div class="rows">
-      <div class="row"><div class="when">Testing</div><p>Manual, functional, regression, smoke, end-to-end, UI, API and database testing</p></div>
-      <div class="row"><div class="when">Automation</div><p>Playwright, Cypress, Page Object Model, custom fixtures, cross-browser testing, GitHub Actions CI/CD</p></div>
-      <div class="row"><div class="when">Programming</div><p>TypeScript, JavaScript, SQL, PostgreSQL, HTML, CSS</p></div>
-      <div class="row"><div class="when">Tools</div><p>Postman, Jira, Git, GitHub, VS Code, Node.js, Microsoft Office, Teams</p></div>
-      <div class="row"><div class="when">Systems</div><p>Windows 10/11, Linux CLI, TCP/IP, DNS, routers, VPN fundamentals, Cat6 cabling, PC assembly, hardware diagnostics</p></div>
+      <div class="row"><span class="k">Testing</span><p>Manual, functional, regression, smoke, end-to-end, UI, API and database testing</p></div>
+      <div class="row"><span class="k">Automation</span><p>Playwright, Cypress, Page Object Model, custom fixtures, cross-browser testing, GitHub Actions CI/CD</p></div>
+      <div class="row"><span class="k">Programming</span><p>TypeScript, JavaScript, SQL, PostgreSQL, HTML, CSS</p></div>
+      <div class="row"><span class="k">Tools</span><p>Postman, Jira, Git, GitHub, VS Code, Node.js, Microsoft Office, Teams</p></div>
+      <div class="row"><span class="k">Systems</span><p>Windows 10/11, Linux CLI, TCP/IP, DNS, routers, VPN fundamentals, Cat6 cabling, PC assembly, hardware diagnostics</p></div>
     </div>
   </section>
 
   <section id="experience">
     <h2 class="label">Experience</h2>
     <div class="rows">
-      <div class="row"><div class="when">Aug 2026 – now</div><div><h3>Installation Intern</h3><p class="sub">Tech 1 Solutions, Chicago, IL</p><ul>
+      <div class="row"><span class="k">Aug 2026 – now</span><div><h3>Installation Intern</h3><p class="sub">Tech 1 Solutions · Chicago, IL</p><ul class="b">
         <li>Install low-voltage cabling and establish network connectivity in clinical settings.</li>
         <li>Terminate and test Cat6 runs with a crimper, punch-down tool and cable tester, then fix faults.</li>
         <li>Work on-site with the installation team to finish cabling and connectivity jobs.</li></ul></div></div>
-      <div class="row"><div class="when">Jan 2024 – now</div><div><h3>Volunteer</h3><p class="sub">Mosque Foundation, Bridgeview, IL</p><ul>
+      <div class="row"><span class="k">Jan 2024 – now</span><div><h3>Volunteer</h3><p class="sub">Mosque Foundation · Bridgeview, IL</p><ul class="b">
         <li>Coordinate logistics for 10–20 volunteers across 6–12 youth events a year, serving 100+ participants.</li>
         <li>Streamlined event setup, cutting setup time by about 20%.</li></ul></div></div>
-      <div class="row"><div class="when">2021 – now</div><div><h3>Earlier work</h3><p class="meta">Forklift Operator and Inventory Associate, Menards (2025 – now). Pharmacy Technician, CVS (2021 – 2022).</p></div></div>
+      <div class="row"><span class="k">2021 – now</span><div><h3>Earlier work</h3><p class="more">Forklift Operator and Inventory Associate, Menards (2025 – now). Pharmacy Technician, CVS (2021 – 2022).</p></div></div>
     </div>
   </section>
 
   <section id="education">
     <h2 class="label">Education</h2>
     <div class="rows">
-      <div class="row"><div class="when">Dec 2026 (exp.)</div><div><h3>B.S. Computer Science</h3><p class="sub">University of Illinois at Chicago</p><p class="meta">Software Design, Programming Language Design &amp; Implementation, Intro to Data Science, Database Systems (in progress)</p></div></div>
-      <div class="row"><div class="when">Dec 2023</div><div><h3>A.S. Computer Science</h3><p class="sub">Moraine Valley Community College</p></div></div>
-      <div class="row"><div class="when">Certifications</div><div><h3>SDET Bootcamp, QA/Test Automation</h3><p class="sub">5 months: JavaScript, Cypress, API testing, SQL, Jira</p><p class="meta">CompTIA A+ (in progress)</p></div></div>
+      <div class="row"><span class="k">Dec 2026 (exp.)</span><div><h3>B.S. Computer Science</h3><p class="sub">University of Illinois at Chicago</p><p class="more">Software Design, Programming Language Design &amp; Implementation, Intro to Data Science, Database Systems (in progress)</p></div></div>
+      <div class="row"><span class="k">Dec 2023</span><div><h3>A.S. Computer Science</h3><p class="sub">Moraine Valley Community College</p></div></div>
+      <div class="row"><span class="k">Certifications</span><div><h3>SDET Bootcamp, QA/Test Automation</h3><p class="sub">5 months · JavaScript, Cypress, API testing, SQL, Jira</p><p class="more">CompTIA A+ (in progress)</p></div></div>
     </div>
   </section>
 
-  <section id="contact">
+  <section id="contact" class="contact">
     <h2 class="label">Contact</h2>
     <p>I'm looking for QA, test automation and IT support roles. Based in Chicago, IL.</p>
-    <a class="contact-big" href="mailto:beldeirawi@gmail.com">beldeirawi@gmail.com</a>
+    <a class="mail" href="mailto:beldeirawi@gmail.com">beldeirawi@gmail.com</a>
+    <div class="rail-links">
+      <a href="https://github.com/beldeirawi01">github.com/beldeirawi01</a>
+      <a href="https://linkedin.com/in/baraa-eldeirawi">linkedin.com/in/baraa-eldeirawi</a>
+    </div>
   </section>
 
   <footer>© 2026 Baraa Eldeirawi</footer>
 </main>
 </div>
+
+<dialog id="viewer" aria-label="Screenshot viewer"><button type="button" id="viewer-close">Close · Esc</button><img id="viewer-img" alt=""><p id="viewer-cap"></p></dialog>
+
+<script>
+(function(){
+  var dlg=document.getElementById('viewer'),img=document.getElementById('viewer-img'),cap=document.getElementById('viewer-cap');
+  if(!dlg||!dlg.showModal)return;
+  document.querySelectorAll('.shot').forEach(function(b){
+    b.addEventListener('click',function(){
+      var i=b.querySelector('img');img.src=b.dataset.src;img.alt=i?i.alt:'';cap.textContent=b.dataset.cap||'';dlg.showModal();
+    });
+  });
+  dlg.addEventListener('click',function(e){if(e.target!==img)dlg.close();});
+  document.getElementById('viewer-close').addEventListener('click',function(){dlg.close();});
+  // highlight the section in view in the side navigation
+  var links=[].slice.call(document.querySelectorAll('.toc a'));
+  if('IntersectionObserver' in window){
+    var io=new IntersectionObserver(function(es){
+      es.forEach(function(e){if(e.isIntersecting){links.forEach(function(a){a.removeAttribute('aria-current');if(a.getAttribute('href')==='#'+e.target.id)a.setAttribute('aria-current','true');});}});
+    },{rootMargin:'-20% 0px -70% 0px'});
+    ['work','skills','experience','education','contact'].forEach(function(id){var el=document.getElementById(id);if(el)io.observe(el);});
+  }
+})();
+</script>
 
 </body>
 </html>
