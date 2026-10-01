@@ -3,64 +3,100 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Baraa Eldeirawi | QA &amp; Test Automation</title>
+<title>Baraa Eldeirawi Portfolio</title>
 <meta name="description" content="Portfolio of Baraa Eldeirawi: Computer Science student focused on QA, test automation (Playwright, TypeScript) and IT support.">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@400;600;700;800&display=swap">
 <style>
-:root{--bg:#f7f7f5;--card:#fff;--ink:#16191d;--muted:#5b636d;--line:#e2e4e8;--accent:#2563eb;--accent-ink:#fff;--chip:#eef2ff;--chip-ink:#1e40af}
-@media(prefers-color-scheme:dark){:root{--bg:#0e1116;--card:#161b22;--ink:#e8ecf1;--muted:#98a2b0;--line:#262d37;--accent:#60a5fa;--accent-ink:#0b1220;--chip:#1c2740;--chip-ink:#a9c4ff}}
+/* Layout: one centered column, each section a soft tinted panel with its own accent colour. */
+:root{--bg:#fbf8ff;--card:#ffffff;--ink:#231b3a;--muted:#675f7c;--line:#e7e0f5;
+--violet:#6c4cf5;--violet-soft:#ece7ff;--coral:#ff6b57;--coral-soft:#ffe6e1;--teal:#0fa89a;--teal-soft:#d9f6f1;--sun:#ffb81f;--sun-soft:#fff1cc;--pink:#e8489a;--pink-soft:#ffe3f1;
+--accent:var(--violet);--accent-ink:#fff;--code-bg:#f1ecff;
+--display:"Fredoka","Nunito",system-ui,sans-serif;--body:"Nunito",system-ui,-apple-system,"Segoe UI",sans-serif}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#15112a;--card:#201a3a;--ink:#f3efff;--muted:#b3aad0;--line:#352d58;--violet:#a493ff;--violet-soft:#2c2456;--coral:#ff8d7c;--coral-soft:#43241f;--teal:#3fd6c6;--teal-soft:#13363a;--sun:#ffcf5a;--sun-soft:#43361a;--pink:#ff7cbc;--pink-soft:#41203a;--accent-ink:#1a1233;--code-bg:#2c2456;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#15112a;--card:#201a3a;--ink:#f3efff;--muted:#b3aad0;--line:#352d58;--violet:#a493ff;--violet-soft:#2c2456;--coral:#ff8d7c;--coral-soft:#43241f;--teal:#3fd6c6;--teal-soft:#13363a;--sun:#ffcf5a;--sun-soft:#43361a;--pink:#ff7cbc;--pink-soft:#41203a;--accent-ink:#1a1233;--code-bg:#2c2456;color-scheme:dark}
 *{box-sizing:border-box}html{scroll-behavior:smooth}
-body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
-a{color:var(--accent)}
-.wrap{max-width:1040px;margin:0 auto;padding:0 20px}
-nav{position:sticky;top:0;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);z-index:5}
-nav .wrap{display:flex;gap:20px;align-items:center;height:56px;overflow-x:auto;white-space:nowrap}
-nav strong{margin-right:auto}nav a{text-decoration:none;color:var(--muted);font-size:14px}nav a:hover{color:var(--ink)}
-header.hero{padding:72px 0 48px}
-.hero h1{font-size:clamp(34px,6vw,56px);line-height:1.1;margin:0 0 12px;letter-spacing:-.02em}
-.hero p.lead{font-size:clamp(17px,2.4vw,21px);color:var(--muted);max-width:680px;margin:0 0 24px}
+body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.65 var(--body)}
+a{color:var(--violet);font-weight:700}
+code{background:var(--code-bg);padding:1px 6px;border-radius:6px;font-size:.9em}
+.wrap{max-width:1040px;margin:0 auto;padding-inline:20px}
+nav{position:sticky;top:env(safe-area-inset-top,0px);background:var(--bg);border-bottom:2px solid var(--line);z-index:5}
+nav .wrap{display:flex;gap:6px;align-items:center;height:60px;overflow-x:auto;white-space:nowrap}
+nav strong{margin-right:auto;font-family:var(--display);font-size:20px;color:var(--violet)}
+nav a{text-decoration:none;color:var(--muted);font-size:15px;padding:6px 12px;border-radius:999px}
+nav a:hover{background:var(--violet-soft);color:var(--violet)}
+header.hero{padding:56px 0 24px}
+.hero .wrap>.intro{background:var(--sun-soft);border-radius:32px;padding:clamp(28px,5vw,56px)}
+.hi{display:inline-block;background:var(--card);color:var(--ink);font-weight:800;font-size:14px;padding:6px 14px;border-radius:999px;margin-bottom:16px;border:2px solid var(--sun)}
+.hero h1{font-family:var(--display);font-size:clamp(36px,6.4vw,62px);line-height:1.08;margin:0 0 14px;font-weight:700;text-wrap:balance}
+.hero h1 em{font-style:normal;color:var(--coral)}
+.hero p.lead{font-size:clamp(18px,2.4vw,21px);color:var(--muted);max-width:660px;margin:0 0 26px}
 .btns{display:flex;flex-wrap:wrap;gap:10px}
-.btn{display:inline-block;padding:10px 18px;border-radius:8px;border:1px solid var(--line);text-decoration:none;color:var(--ink);font-weight:600;font-size:15px;background:var(--card)}
-.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
-.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-top:40px}
-.stat{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px}
-.stat b{display:block;font-size:26px;letter-spacing:-.01em}.stat span{color:var(--muted);font-size:14px}
-section{padding:48px 0;border-top:1px solid var(--line)}
-h2{font-size:28px;margin:0 0 24px;letter-spacing:-.01em}
-h3{margin:0 0 6px;font-size:22px}
-.chips{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0 0;padding:0;list-style:none}
-.chips li{background:var(--chip);color:var(--chip-ink);padding:3px 10px;border-radius:999px;font-size:13px;font-weight:600}
-.skills{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px}
-.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px}
-.card h4{margin:0 0 8px;font-size:15px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
-.project{margin-bottom:56px}
-.project .meta{color:var(--muted);margin:0 0 14px}
-.project ul.pts{padding-left:20px;margin:14px 0}
-.project li{margin-bottom:6px}
-.gallery{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px;margin-top:20px}
-figure{margin:0}
-figure a{display:block;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--card)}
+.btn{display:inline-block;padding:11px 20px;border-radius:999px;border:2px solid var(--line);text-decoration:none;color:var(--ink);font-weight:800;font-size:16px;background:var(--card);transition:transform .15s}
+.btn:hover{transform:translateY(-2px)}
+.btn.primary{background:var(--violet);color:var(--accent-ink);border-color:var(--violet)}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;margin-top:20px}
+.stat{border-radius:22px;padding:18px 20px}
+.stat b{display:block;font-family:var(--display);font-size:34px;line-height:1.1}.stat span{font-size:15px;color:var(--ink);opacity:.8}
+.stat:nth-child(1){background:var(--violet-soft)}.stat:nth-child(1) b{color:var(--violet)}
+.stat:nth-child(2){background:var(--coral-soft)}.stat:nth-child(2) b{color:var(--coral)}
+.stat:nth-child(3){background:var(--teal-soft)}.stat:nth-child(3) b{color:var(--teal)}
+.stat:nth-child(4){background:var(--pink-soft)}.stat:nth-child(4) b{color:var(--pink)}
+section{padding:44px 0}
+h2{font-family:var(--display);font-size:clamp(28px,4vw,36px);margin:0 0 24px;display:inline-block;position:relative;z-index:0}
+h2::after{content:"";position:absolute;left:-4px;right:-4px;bottom:3px;height:12px;background:var(--sun);opacity:.55;border-radius:6px;z-index:-1}
+h3{font-family:var(--display);margin:0 0 6px;font-size:26px;font-weight:600}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0 0;padding:0;list-style:none}
+.chips li{background:var(--tint);color:var(--ink);padding:4px 13px;border-radius:999px;font-size:14px;font-weight:800;border:2px solid var(--hue)}
+.skills{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px}
+.card{background:var(--card);border:2px solid var(--line);border-radius:22px;padding:22px;min-width:0}
+.skills .card:nth-child(5n+1){--hue:var(--violet);--tint:var(--violet-soft)}.skills .card:nth-child(5n+2){--hue:var(--coral);--tint:var(--coral-soft)}.skills .card:nth-child(5n+3){--hue:var(--teal);--tint:var(--teal-soft)}.skills .card:nth-child(5n+4){--hue:var(--pink);--tint:var(--pink-soft)}.skills .card:nth-child(5n+5){--hue:var(--sun);--tint:var(--sun-soft)}
+.skills .card{background:var(--tint);border-color:transparent}
+.card h4{margin:0 0 8px;font-family:var(--display);font-size:18px;font-weight:600;color:var(--ink)}
+.card h4::before{content:"";display:inline-block;width:12px;height:12px;border-radius:50%;background:var(--hue);margin-right:8px}
+.project{border-radius:32px;padding:clamp(22px,4vw,40px);margin-bottom:28px;background:var(--tint);min-width:0}
+#saucedemo{--hue:var(--teal);--tint:var(--teal-soft)}#jobscribe{--hue:var(--coral);--tint:var(--coral-soft)}
+.project h3{font-size:clamp(26px,4vw,34px)}
+.project .meta{color:var(--muted);margin:0 0 14px;font-weight:600}
+.project ul.pts{padding-left:22px;margin:14px 0}
+.project ul.pts li{margin-bottom:8px}.project ul.pts li::marker{color:var(--hue)}
+.chips li{--hue:var(--hue)}
+.project .chips li{background:var(--card)}
+.gallery{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:16px;margin-top:22px;align-items:start}
+figure{margin:0;min-width:0}
+figure a{display:block;border:3px solid var(--card);border-radius:18px;overflow:hidden;background:var(--card);transition:transform .15s}
+figure a:hover{transform:translateY(-3px) rotate(-.4deg)}
 figure img{display:block;width:100%;height:auto}
-figcaption{font-size:13px;color:var(--muted);margin-top:6px}
-.note{font-size:13px;color:var(--muted);margin-top:14px}
-.tl{display:grid;gap:18px}
-.tl .row{display:grid;grid-template-columns:140px 1fr;gap:16px}
-.tl .when{color:var(--muted);font-size:14px}
-.tl h3{font-size:18px}.tl ul{margin:6px 0 0;padding-left:20px}
+figcaption{font-size:14px;color:var(--ink);opacity:.75;margin-top:8px;font-weight:600}
+.note{font-size:14px;color:var(--muted);margin:16px 0 0}
+.tl{display:grid;gap:16px}
+.tl .row{display:grid;grid-template-columns:150px 1fr;gap:16px;background:var(--card);border:2px solid var(--line);border-radius:22px;padding:20px 22px}
+.tl .row:nth-child(1){border-left:8px solid var(--violet)}.tl .row:nth-child(2){border-left:8px solid var(--teal)}.tl .row:nth-child(3){border-left:8px solid var(--sun)}
+.tl .when{color:var(--muted);font-size:15px;font-weight:800}
+.tl h3{font-size:21px}.tl ul{margin:8px 0 0;padding-left:20px}
 @media(max-width:600px){.tl .row{grid-template-columns:1fr;gap:2px}}
-footer{padding:40px 0;border-top:1px solid var(--line);color:var(--muted);font-size:14px}
+#contact .box{background:var(--violet);color:var(--accent-ink);border-radius:32px;padding:clamp(26px,5vw,48px)}
+#contact h2::after{display:none}#contact h2{margin-bottom:10px}
+#contact .btn{border-color:transparent}
+#contact .btn.primary{background:var(--sun);color:#2a1f00;border-color:var(--sun)}
+footer{padding:32px 0 40px;color:var(--muted);font-size:15px;text-align:center}
+@media(prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
 </style>
 </head>
 <body>
+
 <nav><div class="wrap"><strong>Baraa Eldeirawi</strong><a href="#projects">Projects</a><a href="#skills">Skills</a><a href="#experience">Experience</a><a href="#education">Education</a><a href="#contact">Contact</a></div></nav>
 
-<header class="hero"><div class="wrap">
-  <h1>QA &amp; test automation,<br>built to be maintained.</h1>
+<header class="hero"><div class="wrap"><div class="intro">
+  <span class="hi">Hi, I'm Baraa, based in Chicago</span>
+  <h1>I test software so <em>people can trust it.</em></h1>
   <p class="lead">I'm a Computer Science student in Chicago who writes Playwright and TypeScript test frameworks, builds full-stack apps, and installs the network cabling that keeps clinics online. Bilingual in English and Arabic.</p>
   <div class="btns">
     <a class="btn primary" href="#projects">See my work</a>
     <a class="btn" href="https://github.com/beldeirawi01">GitHub</a>
     <a class="btn" href="https://linkedin.com/in/baraa-eldeirawi">LinkedIn</a>
     <a class="btn" href="mailto:beldeirawi@gmail.com">Email me</a>
+  </div>
   </div>
   <div class="stats">
     <div class="stat"><b>30</b><span>automated tests in the SauceDemo framework</span></div>
@@ -86,10 +122,10 @@ footer{padding:40px 0;border-top:1px solid var(--line);color:var(--muted);font-s
     </ul>
     <ul class="chips"><li>Playwright</li><li>TypeScript</li><li>Page Object Model</li><li>Data-driven testing</li><li>Cross-browser</li><li>CI/CD</li></ul>
     <div class="gallery">
-      <figure><a href="assets/saucedemo-page-object.png"><img loading="lazy" src="assets/saucedemo-page-object.png" alt="InventoryPage.ts page object with parameterized addToCart and removeFromCart methods"></a><figcaption>Page object with a parameterized locator for any product</figcaption></figure>
-      <figure><a href="assets/saucedemo-spec.png"><img loading="lazy" src="assets/saucedemo-spec.png" alt="inventory.spec.ts showing a data-driven add-multiple-items test"></a><figcaption>Spec with a shared login hook and a count derived from the input array</figcaption></figure>
-      <figure><a href="assets/saucedemo-ci.png"><img loading="lazy" src="assets/saucedemo-ci.png" alt="GitHub Actions workflow that runs Playwright tests and uploads the report"></a><figcaption>CI workflow: install, run, upload the report</figcaption></figure>
-      <figure><a href="assets/saucedemo-test-data.png"><img loading="lazy" src="assets/saucedemo-test-data.png" alt="CheckoutData.ts with valid and invalid customer profiles"></a><figcaption>Test data kept separate from test logic</figcaption></figure>
+      <figure><a href="assets/saucedemo-page-object.png"><img src="assets/saucedemo-page-object.png" alt="InventoryPage.ts page object with parameterized addToCart and removeFromCart methods"></a><figcaption>Page object with a parameterized locator for any product</figcaption></figure>
+      <figure><a href="assets/saucedemo-spec.png"><img src="assets/saucedemo-spec.png" alt="inventory.spec.ts showing a data-driven add-multiple-items test"></a><figcaption>Spec with a shared login hook and a count derived from the input array</figcaption></figure>
+      <figure><a href="assets/saucedemo-ci.png"><img src="assets/saucedemo-ci.png" alt="GitHub Actions workflow that runs Playwright tests and uploads the report"></a><figcaption>CI workflow: install, run, upload the report</figcaption></figure>
+      <figure><a href="assets/saucedemo-test-data.png"><img src="assets/saucedemo-test-data.png" alt="CheckoutData.ts with valid and invalid customer profiles"></a><figcaption>Test data kept separate from test logic</figcaption></figure>
     </div>
     <p class="note">Screenshots are rendered from the repository's source files.</p>
   </article>
@@ -106,12 +142,12 @@ footer{padding:40px 0;border-top:1px solid var(--line);color:var(--muted);font-s
     </ul>
     <ul class="chips"><li>React</li><li>React Native / Expo</li><li>Express</li><li>Prisma</li><li>PostgreSQL</li><li>Stripe Connect</li><li>Twilio</li><li>Whisper</li><li>Claude API</li></ul>
     <div class="gallery">
-      <figure><a href="assets/jobscribe-dashboard.png"><img loading="lazy" src="assets/jobscribe-dashboard.png" alt="Jobscribe owner dashboard showing revenue, balance, job breakdown and busiest days"></a><figcaption>Owner dashboard: revenue, balances, job mix, busiest days</figcaption></figure>
-      <figure><a href="assets/jobscribe-job-detail.png"><img loading="lazy" src="assets/jobscribe-job-detail.png" alt="Job detail page with a voice note transcript and linked invoice"></a><figcaption>Job detail: voice-note transcript next to the invoice it produced</figcaption></figure>
-      <figure><a href="assets/jobscribe-invoice-detail.png"><img loading="lazy" src="assets/jobscribe-invoice-detail.png" alt="Invoice detail with line items, totals and delivery log"></a><figcaption>Invoice with parts and labor line items and an SMS/email delivery log</figcaption></figure>
-      <figure><a href="assets/jobscribe-client-invoice.png"><img loading="lazy" src="assets/jobscribe-client-invoice.png" alt="Client-facing invoice page with a Pay now button"></a><figcaption>Client-facing invoice page, no login, with a Stripe payment link</figcaption></figure>
-      <figure><a href="assets/jobscribe-jobs.png"><img loading="lazy" src="assets/jobscribe-jobs.png" alt="Scheduling page listing jobs with status and assigned tech"></a><figcaption>Scheduling with status and assigned tech</figcaption></figure>
-      <figure><a href="assets/jobscribe-invoices.png"><img loading="lazy" src="assets/jobscribe-invoices.png" alt="Invoice list with draft, sent, paid and overdue statuses"></a><figcaption>Invoice list across draft, sent, paid and overdue</figcaption></figure>
+      <figure><a href="assets/jobscribe-dashboard.png"><img src="assets/jobscribe-dashboard.png" alt="Jobscribe owner dashboard showing revenue, balance, job breakdown and busiest days"></a><figcaption>Owner dashboard: revenue, balances, job mix, busiest days</figcaption></figure>
+      <figure><a href="assets/jobscribe-job-detail.png"><img src="assets/jobscribe-job-detail.png" alt="Job detail page with a voice note transcript and linked invoice"></a><figcaption>Job detail: voice-note transcript next to the invoice it produced</figcaption></figure>
+      <figure><a href="assets/jobscribe-invoice-detail.png"><img src="assets/jobscribe-invoice-detail.png" alt="Invoice detail with line items, totals and delivery log"></a><figcaption>Invoice with parts and labor line items and an SMS/email delivery log</figcaption></figure>
+      <figure><a href="assets/jobscribe-client-invoice.png"><img src="assets/jobscribe-client-invoice.png" alt="Client-facing invoice page with a Pay now button"></a><figcaption>Client-facing invoice page, no login, with a Stripe payment link</figcaption></figure>
+      <figure><a href="assets/jobscribe-jobs.png"><img src="assets/jobscribe-jobs.png" alt="Scheduling page listing jobs with status and assigned tech"></a><figcaption>Scheduling with status and assigned tech</figcaption></figure>
+      <figure><a href="assets/jobscribe-invoices.png"><img src="assets/jobscribe-invoices.png" alt="Invoice list with draft, sent, paid and overdue statuses"></a><figcaption>Invoice list across draft, sent, paid and overdue</figcaption></figure>
     </div>
     <p class="note">Screenshots are the real dashboard running locally with sample data for a fictional business. No customer data is shown.</p>
   </article>
@@ -152,7 +188,7 @@ footer{padding:40px 0;border-top:1px solid var(--line);color:var(--muted);font-s
   </div>
 </div></section>
 
-<section id="contact"><div class="wrap">
+<section id="contact"><div class="wrap"><div class="box">
   <h2>Let's talk</h2>
   <p>I'm looking for QA, test automation and IT support roles. I'm based in Chicago, IL.</p>
   <div class="btns">
@@ -160,8 +196,10 @@ footer{padding:40px 0;border-top:1px solid var(--line);color:var(--muted);font-s
     <a class="btn" href="https://linkedin.com/in/baraa-eldeirawi">LinkedIn</a>
     <a class="btn" href="https://github.com/beldeirawi01">GitHub</a>
   </div>
-</div></section>
+</div></div></section>
 </main>
 <footer><div class="wrap">© 2026 Baraa Eldeirawi · Chicago, IL</div></footer>
+
+
 </body>
 </html>
