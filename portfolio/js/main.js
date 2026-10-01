@@ -87,34 +87,32 @@
   /* ------------------------------------------------------------------ */
   function initScrollSpy() {
     var links = $$('.toc__link');
-    if (!links.length || !('IntersectionObserver' in window)) return;
+    if (!links.length) return;
 
-    var byId = {};
-    links.forEach(function (link) { byId[link.getAttribute('href').slice(1)] = link; });
+    var entries = links
+      .map(function (link) { return { link: link, section: document.getElementById(link.getAttribute('href').slice(1)) }; })
+      .filter(function (entry) { return entry.section; });
 
-    var observer = new IntersectionObserver(function (entries) {
+    var update = onFrame(function () {
+      // The active section is the last one whose top has passed 30% of the viewport.
+      // At the very bottom, the last section wins even if it is too short to reach that line.
+      var atEnd = window.innerHeight + window.scrollY >= root.scrollHeight - 4;
+      var line = window.innerHeight * 0.3;
+      var active = entries[0];
       entries.forEach(function (entry) {
-        if (!entry.isIntersecting) return;
-        links.forEach(function (link) { link.removeAttribute('aria-current'); });
-        var active = byId[entry.target.id];
-        if (active) active.setAttribute('aria-current', 'true');
+        if (entry.section.getBoundingClientRect().top <= line) active = entry;
       });
-    }, { rootMargin: '-20% 0px -70% 0px' });
+      if (atEnd) active = entries[entries.length - 1];
 
-    Object.keys(byId).forEach(function (id) {
-      var section = document.getElementById(id);
-      if (section) observer.observe(section);
+      entries.forEach(function (entry) {
+        if (entry === active) entry.link.setAttribute('aria-current', 'true');
+        else entry.link.removeAttribute('aria-current');
+      });
     });
 
-    // The last section is shorter than the viewport and can never reach the
-    // observer's band, so mark it active once the page is scrolled to the end.
-    var last = links[links.length - 1];
-    window.addEventListener('scroll', onFrame(function () {
-      var atEnd = window.innerHeight + window.scrollY >= root.scrollHeight - 4;
-      if (!atEnd) return;
-      links.forEach(function (link) { link.removeAttribute('aria-current'); });
-      last.setAttribute('aria-current', 'true');
-    }), { passive: true });
+    window.addEventListener('scroll', update, { passive: true });
+    window.addEventListener('resize', update, { passive: true });
+    update();
   }
 
   /* ------------------------------------------------------------------ */

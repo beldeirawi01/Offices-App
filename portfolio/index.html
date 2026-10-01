@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Baraa Eldeirawi Portfolio</title>
-<meta name="description" content="Portfolio of Baraa Eldeirawi: Computer Science student focused on QA, test automation (Playwright, TypeScript) and IT support.">
+<meta name="description" content="Portfolio of Baraa Eldeirawi: QA and test automation, with Jobscribe's test suite, a SauceDemo Playwright framework and manual QA documents.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
@@ -27,7 +27,9 @@
     <p class="rail__bio">Computer Science student in Chicago, IL. Bilingual in English and Arabic.</p>
     <nav class="toc" aria-label="Sections">
       <a class="toc__link" href="#work">Work</a>
+      <a class="toc__link" href="#qa">QA documents</a>
       <a class="toc__link" href="#skills">Skills</a>
+      <a class="toc__link" href="#it">IT support</a>
       <a class="toc__link" href="#experience">Experience</a>
       <a class="toc__link" href="#education">Education</a>
       <a class="toc__link" href="#contact">Contact</a>
@@ -41,13 +43,19 @@
   <main class="content">
     <section class="section" id="intro">
       <div class="intro-anim">
+        <p class="status"><span class="status__dot" aria-hidden="true"></span>Graduating Dec 2026 · Available for full-time roles from Jan 2027</p>
         <p class="lede">I test software so <em>people can trust it.</em></p>
-        <p class="lede-sub">I write Playwright and TypeScript test frameworks, build full-stack apps, and install the network cabling that keeps clinics online. I care about tests that stay readable and keep working when the UI changes.</p>
+        <p class="lede-sub">I write Playwright and TypeScript test frameworks, and integration tests that run against a real database in CI. I care about tests that stay readable and keep working when the product changes.</p>
+        <div class="actions">
+          <a class="button" href="assets/Baraa_Eldeirawi_Resume.pdf">Download resume (PDF) <span class="button__arrow" aria-hidden="true">→</span></a>
+          <a class="button button--ghost" href="https://github.com/beldeirawi01">GitHub</a>
+          <a class="button button--ghost" href="https://linkedin.com/in/baraa-eldeirawi">LinkedIn</a>
+        </div>
         <ul class="stats" aria-label="At a glance">
-          <li class="stats__item"><span class="stats__value">30</span><span class="stats__label">automated tests</span></li>
-          <li class="stats__item"><span class="stats__value">3</span><span class="stats__label">browsers in CI</span></li>
-          <li class="stats__item"><span class="stats__value">3</span><span class="stats__label">apps in Jobscribe</span></li>
-          <li class="stats__item"><span class="stats__value">Dec 2026</span><span class="stats__label">B.S. at UIC</span></li>
+          <li class="stats__item"><span class="stats__value">119</span><span class="stats__label">automated tests in Jobscribe</span></li>
+          <li class="stats__item"><span class="stats__value">55</span><span class="stats__label">API routes in the system under test</span></li>
+          <li class="stats__item"><span class="stats__value">3</span><span class="stats__label">CI pipelines on push and pull request</span></li>
+          <li class="stats__item"><span class="stats__value">90</span><span class="stats__label">browser runs per SauceDemo CI build</span></li>
         </ul>
       </div>
     </section>
@@ -55,155 +63,288 @@
     <section class="section" id="work" aria-labelledby="work-title">
       <h2 class="section__label" id="work-title">Selected work</h2>
 
+      <article class="project" id="jobscribe">
+        <p class="project__kicker">Featured · Public repository</p>
+        <h3 class="project__title">Jobscribe: a voice-to-invoice app, and the test suite behind it</h3>
+        <p class="project__tech">TypeScript · React · React Native · Express · PostgreSQL · Vitest · Playwright · Jest</p>
+        <p class="project__desc">A tech records a job note on-site and the app turns it into a draft invoice. I built it full-stack (Express API, React dashboard, Expo mobile app, Prisma on PostgreSQL) and wrote the tests that protect the parts that handle money and customer data.</p>
+
+        <h4 class="project__sub">How it is tested</h4>
+        <ul class="project__points">
+          <li><b>115 API integration tests</b> across 22 files, using Vitest and Supertest against a real PostgreSQL database instead of mocks. They cover auth, cross-tenant isolation, invoice send and void guards, Stripe webhook idempotency, subscription gating, SMS consent, the reminder scheduler and money math.</li>
+          <li><b>End-to-end:</b> a Playwright test drives the real dashboard and backend on an isolated database: register a business, add a client, schedule a job, create an invoice and mark it paid.</li>
+          <li><b>Mobile:</b> Jest and React Native Testing Library tests for the login flow every other screen depends on.</li>
+          <li><b>CI:</b> three GitHub Actions workflows (backend, dashboard, mobile) run on pushes and pull requests that touch each app. The backend workflow starts a Postgres 16 service container.</li>
+        </ul>
+
+        <figure class="snippet">
+          <figcaption class="snippet__title">backend/test/tenant-isolation.test.ts</figcaption>
+          <pre class="snippet__code" tabindex="0"><code>it(&quot;rejects creating a job with a clientId belonging to another organization&quot;, async () =&gt; {
+  const orgA = await registerOwner();
+  const orgB = await registerOwner();
+
+  const clientInOrgB = await createClient(orgB.token, { name: &quot;Org B&#x27;s Client&quot; });
+
+  // Org A tries to create a job pointed at Org B&#x27;s client.
+  const res = await request(app)
+    .post(&quot;/api/jobs&quot;)
+    .set(&quot;Authorization&quot;, `Bearer ${orgA.token}`)
+    .send({ clientId: clientInOrgB.id, title: &quot;Sneaky job&quot; });
+
+  expect(res.status).toBe(400);
+});</code></pre>
+        </figure>
+
+        <p class="project__sub project__sub--plain">How the app works</p>
+        <ul class="project__points">
+          <li>Audio is stored in S3, transcribed with OpenAI Whisper, then billing fields are extracted as JSON by the Claude API into a draft invoice.</li>
+          <li>Stripe Connect direct charges and webhooks send money to each business's own account. Twilio handles SMS and node-cron sends overdue-invoice reminders.</li>
+        </ul>
+
+        <ul class="tags" aria-label="Topics"><li>Integration testing</li><li>Test data setup</li><li>Multi-tenant security</li><li>Stripe Connect</li><li>Twilio</li><li>Whisper</li><li>Claude API</li></ul>
+        <div class="actions">
+          <a class="button" href="https://github.com/beldeirawi01/Offices-App">View repository <span class="button__arrow" aria-hidden="true">→</span></a>
+          <a class="button button--ghost" href="https://github.com/beldeirawi01/Offices-App/tree/main/backend/test">Browse the tests</a>
+          <a class="button button--ghost" href="https://github.com/beldeirawi01/Offices-App/tree/main/.github/workflows">CI workflows</a>
+        </div>
+
+        <ul class="gallery" aria-label="Jobscribe screenshots">
+          <li class="gallery__item">
+            <button class="thumb" type="button" data-group="jobscribe" data-full="assets/img/jobscribe-dashboard-1600.webp" data-caption="Owner dashboard: revenue, balances, job mix">
+              <img class="thumb__img" src="assets/img/jobscribe-dashboard-720.webp" srcset="assets/img/jobscribe-dashboard-720.webp 720w, assets/img/jobscribe-dashboard-1600.webp 1600w" sizes="(max-width: 560px) calc(100vw - 40px), (max-width: 860px) calc(50vw - 28px), 344px" width="720" height="450" alt="Jobscribe owner dashboard showing revenue, balance, job breakdown and busiest days" loading="lazy" decoding="async">
+              <span class="thumb__badge" aria-hidden="true">Enlarge</span>
+            </button>
+            <p class="gallery__caption">Owner dashboard: revenue, balances, job mix</p>
+          </li>
+          <li class="gallery__item">
+            <button class="thumb" type="button" data-group="jobscribe" data-full="assets/img/jobscribe-job-detail-1600.webp" data-caption="Job detail: transcript next to its invoice">
+              <img class="thumb__img" src="assets/img/jobscribe-job-detail-720.webp" srcset="assets/img/jobscribe-job-detail-720.webp 720w, assets/img/jobscribe-job-detail-1600.webp 1600w" sizes="(max-width: 560px) calc(100vw - 40px), (max-width: 860px) calc(50vw - 28px), 344px" width="720" height="450" alt="Job detail page with a voice note transcript and linked invoice" loading="lazy" decoding="async">
+              <span class="thumb__badge" aria-hidden="true">Enlarge</span>
+            </button>
+            <p class="gallery__caption">Job detail: transcript next to its invoice</p>
+          </li>
+          <li class="gallery__item">
+            <button class="thumb" type="button" data-group="jobscribe" data-full="assets/img/jobscribe-invoice-detail-1600.webp" data-caption="Invoice with line items and a delivery log">
+              <img class="thumb__img" src="assets/img/jobscribe-invoice-detail-720.webp" srcset="assets/img/jobscribe-invoice-detail-720.webp 720w, assets/img/jobscribe-invoice-detail-1600.webp 1600w" sizes="(max-width: 560px) calc(100vw - 40px), (max-width: 860px) calc(50vw - 28px), 344px" width="720" height="450" alt="Invoice detail with line items, totals and delivery log" loading="lazy" decoding="async">
+              <span class="thumb__badge" aria-hidden="true">Enlarge</span>
+            </button>
+            <p class="gallery__caption">Invoice with line items and a delivery log</p>
+          </li>
+          <li class="gallery__item">
+            <button class="thumb" type="button" data-group="jobscribe" data-full="assets/img/jobscribe-client-invoice-1600.webp" data-caption="Client-facing invoice with a payment link">
+              <img class="thumb__img" src="assets/img/jobscribe-client-invoice-720.webp" srcset="assets/img/jobscribe-client-invoice-720.webp 720w, assets/img/jobscribe-client-invoice-1600.webp 1600w" sizes="(max-width: 560px) calc(100vw - 40px), (max-width: 860px) calc(50vw - 28px), 344px" width="720" height="450" alt="Client-facing invoice page with a Pay now button" loading="lazy" decoding="async">
+              <span class="thumb__badge" aria-hidden="true">Enlarge</span>
+            </button>
+            <p class="gallery__caption">Client-facing invoice with a payment link</p>
+          </li>
+          <li class="gallery__item">
+            <button class="thumb" type="button" data-group="jobscribe" data-full="assets/img/jobscribe-jobs-1600.webp" data-caption="Scheduling with status and assigned tech">
+              <img class="thumb__img" src="assets/img/jobscribe-jobs-720.webp" srcset="assets/img/jobscribe-jobs-720.webp 720w, assets/img/jobscribe-jobs-1600.webp 1600w" sizes="(max-width: 560px) calc(100vw - 40px), (max-width: 860px) calc(50vw - 28px), 344px" width="720" height="450" alt="Scheduling page listing jobs with status and assigned tech" loading="lazy" decoding="async">
+              <span class="thumb__badge" aria-hidden="true">Enlarge</span>
+            </button>
+            <p class="gallery__caption">Scheduling with status and assigned tech</p>
+          </li>
+          <li class="gallery__item">
+            <button class="thumb" type="button" data-group="jobscribe" data-full="assets/img/jobscribe-invoices-1600.webp" data-caption="Invoice list across every status">
+              <img class="thumb__img" src="assets/img/jobscribe-invoices-720.webp" srcset="assets/img/jobscribe-invoices-720.webp 720w, assets/img/jobscribe-invoices-1600.webp 1600w" sizes="(max-width: 560px) calc(100vw - 40px), (max-width: 860px) calc(50vw - 28px), 344px" width="720" height="450" alt="Invoice list with draft, sent, paid and overdue statuses" loading="lazy" decoding="async">
+              <span class="thumb__badge" aria-hidden="true">Enlarge</span>
+            </button>
+            <p class="gallery__caption">Invoice list across every status</p>
+          </li>
+        </ul>
+        <p class="project__note">Screenshots are the real dashboard running locally with sample data for a fictional business. No customer data is shown. Select one to enlarge.</p>
+      </article>
+
       <article class="project" id="saucedemo">
+        <p class="project__kicker">Supporting project</p>
         <h3 class="project__title">SauceDemo Test Automation Framework</h3>
         <p class="project__tech">Playwright · TypeScript · GitHub Actions</p>
-        <p class="project__desc">A Page Object Model framework that tests the full shopper journey on SauceDemo: login, inventory, cart and checkout. Page objects hold locators and actions, specs hold behavior and assertions, and test data lives in its own folder.</p>
+        <p class="project__desc">A Page Object Model framework for the full shopper journey on a practice site: login, inventory, cart and checkout. I built it to show framework structure: page objects for locators and actions, specs for behavior, and separate test data.</p>
         <ul class="project__points">
           <li>30 tests across login (5), inventory and cart (5) and checkout (20), grouped in nested <code>describe</code> blocks that mirror the UI flow.</li>
           <li>GitHub Actions runs the suite on Chromium, Firefox and WebKit on every push and pull request, and uploads the HTML report.</li>
           <li>Parameterized locators such as <code>addToCart(productSlug)</code> cover all 6 products. Assertions are derived from input arrays instead of hardcoded counts.</li>
-          <li>Locators use <code>data-test</code> attributes, checked against the real DOM, so styling changes don't break tests.</li>
         </ul>
-        <ul class="tags" aria-label="Topics"><li>Page Object Model</li><li>Data-driven</li><li>Cross-browser</li><li>CI/CD</li></ul>
-        <a class="button" href="https://github.com/beldeirawi01/sauce-demo-playwright-framework">View on GitHub <span class="button__arrow" aria-hidden="true">→</span></a>
-        <ul class="gallery" aria-label="SauceDemo framework screenshots">
-        <li class="gallery__item">
-          <button class="thumb" type="button" data-group="saucedemo" data-full="assets/img/saucedemo-page-object-1600.webp" data-caption="Page object with a parameterized locator">
-            <img class="thumb__img" src="assets/img/saucedemo-page-object-720.webp" srcset="assets/img/saucedemo-page-object-720.webp 720w, assets/img/saucedemo-page-object-1600.webp 1600w" sizes="(max-width: 560px) calc(100vw - 40px), (max-width: 860px) calc(50vw - 28px), 344px" width="720" height="450" alt="InventoryPage.ts page object with parameterized addToCart and removeFromCart methods" loading="lazy" decoding="async">
-            <span class="thumb__badge" aria-hidden="true">Enlarge</span>
-          </button>
-          <p class="gallery__caption">Page object with a parameterized locator</p>
-        </li>
-        <li class="gallery__item">
-          <button class="thumb" type="button" data-group="saucedemo" data-full="assets/img/saucedemo-spec-1600.webp" data-caption="Spec with a shared login hook">
-            <img class="thumb__img" src="assets/img/saucedemo-spec-720.webp" srcset="assets/img/saucedemo-spec-720.webp 720w, assets/img/saucedemo-spec-1600.webp 1600w" sizes="(max-width: 560px) calc(100vw - 40px), (max-width: 860px) calc(50vw - 28px), 344px" width="720" height="450" alt="inventory.spec.ts showing a shared login hook and nested describe blocks" loading="lazy" decoding="async">
-            <span class="thumb__badge" aria-hidden="true">Enlarge</span>
-          </button>
-          <p class="gallery__caption">Spec with a shared login hook</p>
-        </li>
-        <li class="gallery__item">
-          <button class="thumb" type="button" data-group="saucedemo" data-full="assets/img/saucedemo-ci-1600.webp" data-caption="CI workflow: install, run, upload the report">
-            <img class="thumb__img" src="assets/img/saucedemo-ci-720.webp" srcset="assets/img/saucedemo-ci-720.webp 720w, assets/img/saucedemo-ci-1600.webp 1600w" sizes="(max-width: 560px) calc(100vw - 40px), (max-width: 860px) calc(50vw - 28px), 344px" width="720" height="450" alt="GitHub Actions workflow that runs Playwright tests and uploads the report" loading="lazy" decoding="async">
-            <span class="thumb__badge" aria-hidden="true">Enlarge</span>
-          </button>
-          <p class="gallery__caption">CI workflow: install, run, upload the report</p>
-        </li>
-        <li class="gallery__item">
-          <button class="thumb" type="button" data-group="saucedemo" data-full="assets/img/saucedemo-test-data-1600.webp" data-caption="Test data kept separate from test logic">
-            <img class="thumb__img" src="assets/img/saucedemo-test-data-720.webp" srcset="assets/img/saucedemo-test-data-720.webp 720w, assets/img/saucedemo-test-data-1600.webp 1600w" sizes="(max-width: 560px) calc(100vw - 40px), (max-width: 860px) calc(50vw - 28px), 344px" width="720" height="450" alt="CheckoutData.ts with valid and invalid customer profiles" loading="lazy" decoding="async">
-            <span class="thumb__badge" aria-hidden="true">Enlarge</span>
-          </button>
-          <p class="gallery__caption">Test data kept separate from test logic</p>
-        </li>
-        </ul>
-        <p class="project__note">Screenshots are rendered from the repository's source files. Select one to enlarge.</p>
-      </article>
 
-      <article class="project" id="jobscribe">
-        <h3 class="project__title">Jobscribe</h3>
-        <p class="project__tech">TypeScript · React · React Native · Express · PostgreSQL</p>
-        <p class="project__desc">A voice-to-invoice app for HVAC, plumbing and electrical techs. A tech records a job note on-site and the app turns it into a draft invoice, so nobody has to type it up later.</p>
-        <ul class="project__points">
-          <li>Full-stack build: Express API, React owner dashboard, Expo mobile app, and Prisma on PostgreSQL.</li>
-          <li>Pipeline: audio stored in S3, transcribed with OpenAI Whisper, then billing fields extracted as JSON by the Claude API into a draft invoice.</li>
-          <li>Stripe Connect direct charges and webhooks (money goes to each business's own account), Twilio SMS delivery, and a node-cron scheduler for overdue-invoice reminders.</li>
-          <li>Tested with Vitest and Supertest against a real Postgres database, a Playwright end-to-end suite for the dashboard, and Jest for mobile, all running in CI.</li>
+        <figure class="snippet">
+          <figcaption class="snippet__title">pages/InventoryPage.ts</figcaption>
+          <pre class="snippet__code" tabindex="0"><code>async addToCart(productSlug: string) {
+    await this.page.locator(`[data-test=&quot;add-to-cart-${productSlug}&quot;]`).click()
+}
+
+async removeFromCart(productSlug: string) {
+    await this.page.locator(`[data-test=&quot;remove-${productSlug}&quot;]`).click()
+}</code></pre>
+        </figure>
+
+        <ul class="tags" aria-label="Topics"><li>Page Object Model</li><li>Data-driven</li><li>Cross-browser</li><li>CI/CD</li></ul>
+        <div class="actions">
+          <a class="button button--ghost" href="https://github.com/beldeirawi01/sauce-demo-playwright-framework">View repository <span class="button__arrow" aria-hidden="true">→</span></a>
+        </div>
+        <ul class="gallery" aria-label="SauceDemo framework screenshots">
+          <li class="gallery__item">
+            <button class="thumb" type="button" data-group="saucedemo" data-full="assets/img/saucedemo-page-object-1600.webp" data-caption="Page object with a parameterized locator">
+              <img class="thumb__img" src="assets/img/saucedemo-page-object-720.webp" srcset="assets/img/saucedemo-page-object-720.webp 720w, assets/img/saucedemo-page-object-1600.webp 1600w" sizes="(max-width: 560px) calc(100vw - 40px), (max-width: 860px) calc(50vw - 28px), 344px" width="720" height="450" alt="InventoryPage.ts page object with parameterized addToCart and removeFromCart methods" loading="lazy" decoding="async">
+              <span class="thumb__badge" aria-hidden="true">Enlarge</span>
+            </button>
+            <p class="gallery__caption">Page object with a parameterized locator · <a class="link" href="https://github.com/beldeirawi01/sauce-demo-playwright-framework/blob/master/pages/InventoryPage.ts">View file</a></p>
+          </li>
+          <li class="gallery__item">
+            <button class="thumb" type="button" data-group="saucedemo" data-full="assets/img/saucedemo-spec-1600.webp" data-caption="Spec with a shared login hook">
+              <img class="thumb__img" src="assets/img/saucedemo-spec-720.webp" srcset="assets/img/saucedemo-spec-720.webp 720w, assets/img/saucedemo-spec-1600.webp 1600w" sizes="(max-width: 560px) calc(100vw - 40px), (max-width: 860px) calc(50vw - 28px), 344px" width="720" height="450" alt="inventory.spec.ts showing a shared login hook and nested describe blocks" loading="lazy" decoding="async">
+              <span class="thumb__badge" aria-hidden="true">Enlarge</span>
+            </button>
+            <p class="gallery__caption">Spec with a shared login hook · <a class="link" href="https://github.com/beldeirawi01/sauce-demo-playwright-framework/blob/master/tests/inventory.spec.ts">View file</a></p>
+          </li>
+          <li class="gallery__item">
+            <button class="thumb" type="button" data-group="saucedemo" data-full="assets/img/saucedemo-ci-1600.webp" data-caption="CI workflow: install, run, upload the report">
+              <img class="thumb__img" src="assets/img/saucedemo-ci-720.webp" srcset="assets/img/saucedemo-ci-720.webp 720w, assets/img/saucedemo-ci-1600.webp 1600w" sizes="(max-width: 560px) calc(100vw - 40px), (max-width: 860px) calc(50vw - 28px), 344px" width="720" height="450" alt="GitHub Actions workflow that runs Playwright tests and uploads the report" loading="lazy" decoding="async">
+              <span class="thumb__badge" aria-hidden="true">Enlarge</span>
+            </button>
+            <p class="gallery__caption">CI workflow: install, run, upload the report · <a class="link" href="https://github.com/beldeirawi01/sauce-demo-playwright-framework/blob/master/.github/workflows/playwright.yml">View file</a></p>
+          </li>
+          <li class="gallery__item">
+            <button class="thumb" type="button" data-group="saucedemo" data-full="assets/img/saucedemo-test-data-1600.webp" data-caption="Test data kept separate from test logic">
+              <img class="thumb__img" src="assets/img/saucedemo-test-data-720.webp" srcset="assets/img/saucedemo-test-data-720.webp 720w, assets/img/saucedemo-test-data-1600.webp 1600w" sizes="(max-width: 560px) calc(100vw - 40px), (max-width: 860px) calc(50vw - 28px), 344px" width="720" height="450" alt="CheckoutData.ts with valid and invalid customer profiles" loading="lazy" decoding="async">
+              <span class="thumb__badge" aria-hidden="true">Enlarge</span>
+            </button>
+            <p class="gallery__caption">Test data kept separate from test logic · <a class="link" href="https://github.com/beldeirawi01/sauce-demo-playwright-framework/blob/master/test-data/CheckoutData.ts">View file</a></p>
+          </li>
         </ul>
-        <ul class="tags" aria-label="Topics"><li>Stripe Connect</li><li>Twilio</li><li>Whisper</li><li>Claude API</li><li>Prisma</li><li>Expo</li></ul>
-        <a class="button" href="https://github.com/beldeirawi01/Offices-App">View on GitHub <span class="button__arrow" aria-hidden="true">→</span></a>
-        <ul class="gallery" aria-label="Jobscribe screenshots">
-        <li class="gallery__item">
-          <button class="thumb" type="button" data-group="jobscribe" data-full="assets/img/jobscribe-dashboard-1600.webp" data-caption="Owner dashboard: revenue, balances, job mix">
-            <img class="thumb__img" src="assets/img/jobscribe-dashboard-720.webp" srcset="assets/img/jobscribe-dashboard-720.webp 720w, assets/img/jobscribe-dashboard-1600.webp 1600w" sizes="(max-width: 560px) calc(100vw - 40px), (max-width: 860px) calc(50vw - 28px), 344px" width="720" height="450" alt="Jobscribe owner dashboard showing revenue, balance, job breakdown and busiest days" loading="lazy" decoding="async">
-            <span class="thumb__badge" aria-hidden="true">Enlarge</span>
-          </button>
-          <p class="gallery__caption">Owner dashboard: revenue, balances, job mix</p>
-        </li>
-        <li class="gallery__item">
-          <button class="thumb" type="button" data-group="jobscribe" data-full="assets/img/jobscribe-job-detail-1600.webp" data-caption="Job detail: transcript next to its invoice">
-            <img class="thumb__img" src="assets/img/jobscribe-job-detail-720.webp" srcset="assets/img/jobscribe-job-detail-720.webp 720w, assets/img/jobscribe-job-detail-1600.webp 1600w" sizes="(max-width: 560px) calc(100vw - 40px), (max-width: 860px) calc(50vw - 28px), 344px" width="720" height="450" alt="Job detail page with a voice note transcript and linked invoice" loading="lazy" decoding="async">
-            <span class="thumb__badge" aria-hidden="true">Enlarge</span>
-          </button>
-          <p class="gallery__caption">Job detail: transcript next to its invoice</p>
-        </li>
-        <li class="gallery__item">
-          <button class="thumb" type="button" data-group="jobscribe" data-full="assets/img/jobscribe-invoice-detail-1600.webp" data-caption="Invoice with line items and a delivery log">
-            <img class="thumb__img" src="assets/img/jobscribe-invoice-detail-720.webp" srcset="assets/img/jobscribe-invoice-detail-720.webp 720w, assets/img/jobscribe-invoice-detail-1600.webp 1600w" sizes="(max-width: 560px) calc(100vw - 40px), (max-width: 860px) calc(50vw - 28px), 344px" width="720" height="450" alt="Invoice detail with line items, totals and delivery log" loading="lazy" decoding="async">
-            <span class="thumb__badge" aria-hidden="true">Enlarge</span>
-          </button>
-          <p class="gallery__caption">Invoice with line items and a delivery log</p>
-        </li>
-        <li class="gallery__item">
-          <button class="thumb" type="button" data-group="jobscribe" data-full="assets/img/jobscribe-client-invoice-1600.webp" data-caption="Client-facing invoice with a payment link">
-            <img class="thumb__img" src="assets/img/jobscribe-client-invoice-720.webp" srcset="assets/img/jobscribe-client-invoice-720.webp 720w, assets/img/jobscribe-client-invoice-1600.webp 1600w" sizes="(max-width: 560px) calc(100vw - 40px), (max-width: 860px) calc(50vw - 28px), 344px" width="720" height="450" alt="Client-facing invoice page with a Pay now button" loading="lazy" decoding="async">
-            <span class="thumb__badge" aria-hidden="true">Enlarge</span>
-          </button>
-          <p class="gallery__caption">Client-facing invoice with a payment link</p>
-        </li>
-        <li class="gallery__item">
-          <button class="thumb" type="button" data-group="jobscribe" data-full="assets/img/jobscribe-jobs-1600.webp" data-caption="Scheduling with status and assigned tech">
-            <img class="thumb__img" src="assets/img/jobscribe-jobs-720.webp" srcset="assets/img/jobscribe-jobs-720.webp 720w, assets/img/jobscribe-jobs-1600.webp 1600w" sizes="(max-width: 560px) calc(100vw - 40px), (max-width: 860px) calc(50vw - 28px), 344px" width="720" height="450" alt="Scheduling page listing jobs with status and assigned tech" loading="lazy" decoding="async">
-            <span class="thumb__badge" aria-hidden="true">Enlarge</span>
-          </button>
-          <p class="gallery__caption">Scheduling with status and assigned tech</p>
-        </li>
-        <li class="gallery__item">
-          <button class="thumb" type="button" data-group="jobscribe" data-full="assets/img/jobscribe-invoices-1600.webp" data-caption="Invoice list across every status">
-            <img class="thumb__img" src="assets/img/jobscribe-invoices-720.webp" srcset="assets/img/jobscribe-invoices-720.webp 720w, assets/img/jobscribe-invoices-1600.webp 1600w" sizes="(max-width: 560px) calc(100vw - 40px), (max-width: 860px) calc(50vw - 28px), 344px" width="720" height="450" alt="Invoice list with draft, sent, paid and overdue statuses" loading="lazy" decoding="async">
-            <span class="thumb__badge" aria-hidden="true">Enlarge</span>
-          </button>
-          <p class="gallery__caption">Invoice list across every status</p>
-        </li>
-        </ul>
-        <p class="project__note">Screenshots are the real dashboard running locally with sample data for a fictional business. No customer data is shown. Select one to enlarge.</p>
+        <p class="project__note">Screenshots are rendered from the repository's source files. Select one to enlarge, or use the links to read the real files.</p>
       </article>
+    </section>
+
+    <section class="section" id="qa" aria-labelledby="qa-title">
+      <h2 class="section__label" id="qa-title">QA documents</h2>
+      <p class="section__intro">Manual QA work on Jobscribe, written from the requirements in its README and checked against the code.</p>
+
+      <h3 class="block__title">Test plan</h3>
+      <dl class="plan">
+        <div><dt>Objective</dt><dd>Verify the flow from creating a job to getting paid, and the rules that protect money and each business's data.</dd></div>
+        <div><dt>In scope</dt><dd>Sign-up and trial, tenant isolation, clients and jobs, invoice create, send, void and mark paid, subscription gating, the public invoice page, reminders.</dd></div>
+        <div><dt>Out of scope</dt><dd>Stripe's hosted onboarding, accuracy of Whisper and Claude output, load testing, native device testing.</dd></div>
+        <div><dt>Approach</dt><dd>Automated API tests on a real database, a Playwright end-to-end path, and manual exploratory sessions on the dashboard.</dd></div>
+        <div><dt>Environment</dt><dd>Local build, PostgreSQL, Stripe in test mode, desktop Chrome.</dd></div>
+        <div><dt>Entry and exit</dt><dd>Entry: migrations applied and CI green. Exit: every priority 1 case passes and no Critical or High defect is open.</dd></div>
+        <div><dt>Risks</dt><dd>AI extraction varies between runs, third-party sandboxes can be slow, and timezone handling is inconsistent (see JB-002).</dd></div>
+      </dl>
+
+      <h3 class="block__title">Sample test cases</h3>
+      <p class="table-note">The last column names the test file in <code>backend/test</code> that covers the case.</p>
+      <div class="table-wrap">
+        <table class="cases">
+          <colgroup><col class="col-id"><col class="col-scenario"><col class="col-steps"><col class="col-expected"><col class="col-auto"></colgroup>
+          <thead><tr><th scope="col">ID</th><th scope="col">Scenario</th><th scope="col">Steps</th><th scope="col">Expected</th><th scope="col">Automated by</th></tr></thead>
+          <tbody>
+            <tr><td data-label="ID">TC-01</td><th scope="row" data-label="Scenario">New business starts a 14-day trial</th><td data-label="Steps">Register a new business.</td><td data-label="Expected">Organization is created as TRIALING with a trial end about 14 days out.</td><td data-label="Automated by">subscription</td></tr>
+            <tr><td data-label="ID">TC-02</td><th scope="row" data-label="Scenario">Expired trial blocks the core app</th><td data-label="Steps">Expire the trial with no paid plan, then open Clients, Jobs and Invoices.</td><td data-label="Expected">Each returns 402 Payment Required. Settings stays reachable so the owner can pay.</td><td data-label="Automated by">subscription</td></tr>
+            <tr><td data-label="ID">TC-03</td><th scope="row" data-label="Scenario">Tenant isolation on job creation</th><td data-label="Steps">As business A, create a job for a client that belongs to business B.</td><td data-label="Expected">Request is rejected with 400 and no job is created.</td><td data-label="Automated by">tenant-isolation</td></tr>
+            <tr><td data-label="ID">TC-04</td><th scope="row" data-label="Scenario">Send is blocked before Stripe onboarding</th><td data-label="Steps">Send an invoice while Stripe charges are not enabled.</td><td data-label="Expected">Send is refused. The dashboard shows a warning and disables the button.</td><td data-label="Automated by">invoices (API). Banner checked manually.</td></tr>
+            <tr><td data-label="ID">TC-05</td><th scope="row" data-label="Scenario">SMS only with consent</th><td data-label="Steps">Send to a client who has a phone number, no SMS consent and no email.</td><td data-label="Expected">Send is refused. No text is sent.</td><td data-label="Automated by">invoices</td></tr>
+            <tr><td data-label="ID">TC-06</td><th scope="row" data-label="Scenario">Invoice numbers are sequential per business</th><td data-label="Steps">Create three invoices in one business, then one in another.</td><td data-label="Expected">INV-000001 to INV-000003 in the first business. The second starts at INV-000001.</td><td data-label="Automated by">invoice.service</td></tr>
+            <tr><td data-label="ID">TC-07</td><th scope="row" data-label="Scenario">Duplicate Stripe webhook is ignored</th><td data-label="Steps">Redeliver the same payment_intent.succeeded event.</td><td data-label="Expected">The payment is recorded once.</td><td data-label="Automated by">webhook-idempotency</td></tr>
+            <tr><td data-label="ID">TC-08</td><th scope="row" data-label="Scenario">Job times use the business timezone</th><td data-label="Steps">Set the business to America/Chicago. Open a job scheduled for 3:00 PM Central from a browser in Pacific time.</td><td data-label="Expected">The job shows 3:00 PM Central.</td><td data-label="Automated">Not covered. Fails today (JB-002).</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 class="block__title">Defect reports</h3>
+      <div class="bugs">
+        <article class="bug" id="jb-001">
+          <header class="bug__head">
+            <span class="bug__id">JB-001</span>
+            <h4 class="bug__title">Dashboard never shows the revenue trend</h4>
+            <ul class="bug__meta" aria-label="Details">
+              <li class="chip chip--medium">Severity: Medium</li>
+              <li class="chip">Priority: P2</li>
+              <li class="chip">Dashboard</li>
+              <li class="chip">Open</li>
+            </ul>
+          </header>
+          <dl class="bug__body">
+            <div><dt>Steps</dt><dd><ol><li>Log in as an owner who has paid invoices.</li><li>Open the Dashboard.</li></ol></dd></div>
+            <div><dt>Expected</dt><dd>The README lists revenue trends as part of reporting, and the API already returns monthly revenue. A revenue-by-month view is shown.</dd></div>
+            <div><dt>Actual</dt><dd>Only four totals, job type, busiest days and job status are shown. There is no monthly revenue view.</dd></div>
+            <div><dt>Evidence</dt><dd><code>backend/src/routes/reports.routes.ts</code> builds and returns <code>revenueByMonth</code>. <code>dashboard/src/pages/Dashboard.tsx</code> never reads it. It appears only as a type in <code>dashboard/src/api/client.ts</code>.</dd></div>
+          </dl>
+        </article>
+        <article class="bug" id="jb-002">
+          <header class="bug__head">
+            <span class="bug__id">JB-002</span>
+            <h4 class="bug__title">Times ignore the business timezone setting</h4>
+            <ul class="bug__meta" aria-label="Details">
+              <li class="chip chip--medium">Severity: Medium</li>
+              <li class="chip">Priority: P2</li>
+              <li class="chip">Scheduling, Job detail</li>
+              <li class="chip">Open</li>
+            </ul>
+          </header>
+          <dl class="bug__body">
+            <div><dt>Steps</dt><dd><ol><li>In Settings, set the timezone to America/Chicago.</li><li>Create a job for 3:00 PM Central.</li><li>Open Scheduling and the job from a browser set to Pacific time.</li></ol></dd></div>
+            <div><dt>Expected</dt><dd>The job shows 3:00 PM Central, or at least names the timezone it is in.</dd></div>
+            <div><dt>Actual</dt><dd>The time is converted to the viewer's browser timezone with no zone label, so the same job reads as 1:00 PM.</dd></div>
+            <div><dt>Evidence</dt><dd>Dates use <code>new Date(...).toLocaleString()</code> with no timezone argument (<code>JobDetail.tsx:225</code>, <code>Jobs.tsx:187</code>). The organization timezone is read only by the reminder scheduler and the Settings page. The same gap exists server-side: <code>reports.routes.ts:28</code> groups revenue by the server's local month.</dd></div>
+          </dl>
+        </article>
+        <article class="bug" id="jb-003">
+          <header class="bug__head">
+            <span class="bug__id">JB-003</span>
+            <h4 class="bug__title">Large money amounts have no thousands separators</h4>
+            <ul class="bug__meta" aria-label="Details">
+              <li class="chip chip--low">Severity: Low</li>
+              <li class="chip">Priority: P3</li>
+              <li class="chip">Dashboard</li>
+              <li class="chip">Open</li>
+            </ul>
+          </header>
+          <dl class="bug__body">
+            <div><dt>Steps</dt><dd><ol><li>Use a business with more than $1,000 collected.</li><li>Open the Dashboard.</li></ol></dd></div>
+            <div><dt>Expected</dt><dd>Revenue collected reads <b>$4,820.50</b>.</dd></div>
+            <div><dt>Actual</dt><dd>It reads <b>$4820.50</b>, which is harder to scan at larger amounts.</dd></div>
+            <div><dt>Evidence</dt><dd><code>Dashboard.tsx:36-37</code> formats with <code>toFixed(2)</code> instead of <code>Intl.NumberFormat</code>.</dd></div>
+          </dl>
+        </article>
+      </div>
     </section>
 
     <section class="section" id="skills" aria-labelledby="skills-title">
       <h2 class="section__label" id="skills-title">Skills</h2>
+      <p class="section__intro">Each skill below links to work on this page.</p>
       <div class="rows">
-        <div class="row"><span class="row__key">Testing</span><p class="row__text">Manual, functional, regression, smoke, end-to-end, UI, API and database testing</p></div>
-        <div class="row"><span class="row__key">Automation</span><p class="row__text">Playwright, Cypress, Page Object Model, custom fixtures, cross-browser testing, GitHub Actions CI/CD</p></div>
-        <div class="row"><span class="row__key">Programming</span><p class="row__text">TypeScript, JavaScript, SQL, PostgreSQL, HTML, CSS</p></div>
-        <div class="row"><span class="row__key">Tools</span><p class="row__text">Postman, Jira, Git, GitHub, VS Code, Node.js, Microsoft Office, Teams</p></div>
-        <div class="row"><span class="row__key">Systems</span><p class="row__text">Windows 10/11, Linux CLI, TCP/IP, DNS, routers, VPN fundamentals, Cat6 cabling, PC assembly, hardware diagnostics</p></div>
+        <div class="row"><span class="row__key">Test automation</span><p class="row__text">Playwright, Vitest, Supertest, Jest, Page Object Model, cross-browser testing, GitHub Actions CI. <a class="link" href="#work">See projects</a></p></div>
+        <div class="row"><span class="row__key">Manual QA</span><p class="row__text">Test plans, test cases and defect reports. <a class="link" href="#qa">See QA documents</a></p></div>
+        <div class="row"><span class="row__key">Languages and data</span><p class="row__text">TypeScript, JavaScript, SQL, PostgreSQL with Prisma</p></div>
+        <div class="row"><span class="row__key">Tools</span><p class="row__text">Git, GitHub, VS Code, Node.js</p></div>
+        <div class="row"><span class="row__key">Bootcamp-trained</span><p class="row__text">Cypress, Jira and API testing from a five-month SDET bootcamp. No public work yet, so it is listed apart from the rest.</p></div>
+      </div>
+    </section>
+
+    <section class="section" id="it" aria-labelledby="it-title">
+      <h2 class="section__label" id="it-title">IT support</h2>
+      <p class="section__intro">My main track is QA. I also do hands-on IT work, and it is where my troubleshooting habits come from.</p>
+      <div class="rows">
+        <div class="row">
+          <span class="row__key">Aug 2026 – now</span>
+          <div>
+            <h3 class="row__title">Installation Intern, Tech 1 Solutions</h3>
+            <ul class="row__list">
+              <li>Terminate and test Cat6 runs with a crimper, punch-down tool and cable tester, then trace and fix faults.</li>
+              <li>Establish network connectivity in clinical settings, working on-site with the installation team.</li>
+              <li>PC assembly and hardware diagnostics. CompTIA A+ in progress.</li>
+            </ul>
+          </div>
+        </div>
       </div>
     </section>
 
     <section class="section" id="experience" aria-labelledby="experience-title">
       <h2 class="section__label" id="experience-title">Experience</h2>
       <div class="rows">
-        <div class="row">
-          <span class="row__key">Aug 2026 – now</span>
-          <div>
-            <h3 class="row__title">Installation Intern</h3>
-            <p class="row__sub">Tech 1 Solutions · Chicago, IL</p>
-            <ul class="row__list">
-              <li>Install low-voltage cabling and establish network connectivity in clinical settings.</li>
-              <li>Terminate and test Cat6 runs with a crimper, punch-down tool and cable tester, then fix faults.</li>
-              <li>Work on-site with the installation team to finish cabling and connectivity jobs.</li>
-            </ul>
-          </div>
-        </div>
-        <div class="row">
-          <span class="row__key">Jan 2024 – now</span>
-          <div>
-            <h3 class="row__title">Volunteer</h3>
-            <p class="row__sub">Mosque Foundation · Bridgeview, IL</p>
-            <ul class="row__list">
-              <li>Coordinate logistics for 10–20 volunteers across 6–12 youth events a year, serving 100+ participants.</li>
-              <li>Streamlined event setup, cutting setup time by about 20%.</li>
-            </ul>
-          </div>
-        </div>
-        <div class="row">
-          <span class="row__key">2021 – now</span>
-          <div>
-            <h3 class="row__title">Earlier work</h3>
-            <p class="row__more">Forklift Operator and Inventory Associate, Menards (2025 – now). Pharmacy Technician, CVS (2021 – 2022).</p>
-          </div>
-        </div>
+        <div class="row"><span class="row__key">Aug 2026 – now</span><div><h3 class="row__title">Installation Intern</h3><p class="row__sub">Tech 1 Solutions · Chicago, IL</p><p class="row__more">Cabling and network connectivity for clinical sites. Details above under IT support.</p></div></div>
+        <div class="row"><span class="row__key">Jan 2024 – now</span><div><h3 class="row__title">Volunteer</h3><p class="row__sub">Mosque Foundation · Bridgeview, IL</p><p class="row__more">Coordinate 10–20 volunteers across 6–12 youth events a year for 100+ participants, and cut setup time by about 20%. Skill: planning and coordination.</p></div></div>
+        <div class="row"><span class="row__key">Aug 2025 – now</span><div><h3 class="row__title">Forklift Operator and Inventory Associate</h3><p class="row__sub">Menards</p><p class="row__more">Zero safety incidents, and ~15–20% faster product retrieval after reorganizing the yard layout. Skill: accuracy and process improvement.</p></div></div>
+        <div class="row"><span class="row__key">Nov 2021 – Aug 2022</span><div><h3 class="row__title">Pharmacy Technician</h3><p class="row__sub">CVS · Evergreen Park, IL</p><p class="row__more">Checked insurance and dosage details on ~100–150 prescriptions a day under HIPAA rules. Skill: accuracy and compliance.</p></div></div>
       </div>
     </section>
 
@@ -218,30 +359,20 @@
             <p class="row__more">Software Design, Programming Language Design &amp; Implementation, Intro to Data Science, Database Systems (in progress)</p>
           </div>
         </div>
-        <div class="row">
-          <span class="row__key">Dec 2023</span>
-          <div>
-            <h3 class="row__title">A.S. Computer Science</h3>
-            <p class="row__sub">Moraine Valley Community College</p>
-          </div>
-        </div>
-        <div class="row">
-          <span class="row__key">Certifications</span>
-          <div>
-            <h3 class="row__title">SDET Bootcamp, QA/Test Automation</h3>
-            <p class="row__sub">5 months · JavaScript, Cypress, API testing, SQL, Jira</p>
-            <p class="row__more">CompTIA A+ (in progress)</p>
-          </div>
-        </div>
+        <div class="row"><span class="row__key">Dec 2023</span><div><h3 class="row__title">A.S. Computer Science</h3><p class="row__sub">Moraine Valley Community College</p></div></div>
+        <div class="row"><span class="row__key">Certifications</span><div><h3 class="row__title">SDET Bootcamp, QA/Test Automation</h3><p class="row__sub">5 months · JavaScript, Cypress, API testing, SQL, Jira</p><p class="row__more">CompTIA A+ (in progress)</p></div></div>
       </div>
     </section>
 
     <section class="section" id="contact" aria-labelledby="contact-title">
       <h2 class="section__label" id="contact-title">Contact</h2>
-      <p class="contact__text">I'm looking for QA, test automation and IT support roles. Based in Chicago, IL.</p>
+      <p class="contact__text">I'm looking for QA and test automation roles starting January 2027, based in Chicago, IL.</p>
       <div class="contact__row">
         <a class="contact__mail" id="email" href="mailto:beldeirawi@gmail.com">beldeirawi@gmail.com</a>
         <button class="copy" id="copy-email" type="button">Copy</button>
+      </div>
+      <div class="actions">
+        <a class="button" href="assets/Baraa_Eldeirawi_Resume.pdf">Download resume (PDF) <span class="button__arrow" aria-hidden="true">→</span></a>
       </div>
       <div class="rail__links contact__links">
         <a class="rail__link" href="https://github.com/beldeirawi01">github.com/beldeirawi01</a>

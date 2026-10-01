@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Baraa Eldeirawi Resume</title>
+<style>
+@page{size:Letter;margin:0.4in 0.55in}
+*{box-sizing:border-box}
+body{margin:0;font:9.6pt/1.28 Carlito,Calibri,Arial,Helvetica,sans-serif;color:#111}
+h1{margin:0;text-align:center;font-size:20pt;color:#1f3a70;letter-spacing:.2px}
+.contact{text-align:center;font-size:9pt;margin:2pt 0 6pt}
+h2{margin:7pt 0 3pt;padding-bottom:1pt;border-bottom:1.2px solid #1f3a70;font-size:10pt;color:#1f3a70;text-transform:uppercase;letter-spacing:.3px}
+p{margin:2pt 0}
+ul{margin:2pt 0 0;padding-left:15pt}li{margin:1.5pt 0}
+.row{display:flex;justify-content:space-between;gap:12pt;margin-top:4pt}
+.row b{font-weight:700}.row i{white-space:nowrap}
+.sub{margin:0}
+a{color:#1f3a70;text-decoration:none}
+</style></head><body>
+<h1>Baraa Eldeirawi</h1>
+<div class="contact">Chicago, IL &nbsp;|&nbsp; beldeirawi@gmail.com &nbsp;|&nbsp; linkedin.com/in/baraa-eldeirawi &nbsp;|&nbsp; github.com/beldeirawi01</div>
+
+<h2>Summary</h2>
+<p>Computer Science student (graduating Dec 2026) focused on QA and test automation, with hands-on experience in software testing, troubleshooting and network installation. Completed a five-month SDET bootcamp (JavaScript, Cypress, API testing, SQL, Jira, Page Object Model). Pursuing CompTIA A+. Bilingual in English and Arabic.</p>
+
+<h2>Technical Skills</h2>
+<p><b>Test automation:</b> Playwright, Vitest, Supertest, Jest, Page Object Model, cross-browser testing, GitHub Actions CI/CD. <b>Also studied:</b> Cypress, Jira, API testing (bootcamp)</p>
+<p><b>Programming:</b> TypeScript, JavaScript, SQL, PostgreSQL, HTML, CSS</p>
+<p><b>Tools:</b> Git, GitHub, VS Code, Node.js</p>
+<p><b>Field IT:</b> Cat6 cabling and termination, network connectivity, cable testing and fault finding, PC assembly, hardware diagnostics</p>
+
+<h2>Projects</h2>
+<div class="row"><span><b>Offices-App (Jobscribe)</b> — TypeScript, React, React Native, PostgreSQL</span><i>github.com/beldeirawi01/Offices-App</i></div>
+<ul>
+<li>Built a full-stack voice-to-invoice app (Express API, React dashboard, Expo mobile app, Prisma/PostgreSQL) for HVAC, plumbing and electrical techs</li>
+<li>Wrote 115 backend integration tests (Vitest, Supertest) that run against a real PostgreSQL database in CI, covering auth, cross-tenant isolation, invoice send/void guards, webhook idempotency and subscription gating; plus a Playwright E2E suite and Jest mobile tests</li>
+<li>Implemented a pipeline: audio stored in S3, transcribed with OpenAI Whisper, billing fields extracted as JSON via the Claude API into a draft invoice; integrated Stripe Connect, Twilio SMS and a node-cron reminder scheduler</li>
+</ul>
+<div class="row"><span><b>SauceDemo Test Automation Framework</b> — Playwright, TypeScript</span><i>github.com/beldeirawi01/sauce-demo-playwright-framework</i></div>
+<ul>
+<li>Built a Page Object Model framework with 30 tests across login, inventory/cart and checkout flows</li>
+<li>Configured GitHub Actions to run the suite on Chromium, Firefox and WebKit on every push and pull request</li>
+<li>Designed parameterized locators (e.g., addToCart(productSlug)) covering all 6 products, with data-driven assertions derived from input arrays</li>
+</ul>
+
+<h2>Experience</h2>
+<div class="row"><span><b>Tech 1 Solutions</b> — Installation Intern, Chicago, IL</span><i>Aug 2026 – Present</i></div>
+<ul>
+<li>Install low-voltage cabling and establish network connectivity in clinical settings</li>
+<li>Terminate and test Cat6 runs with a crimper, punch-down tool and cable tester, verifying connectivity and fixing faults</li>
+</ul>
+<div class="row"><span><b>Mosque Foundation</b> — Volunteer, Bridgeview, IL</span><i>Jan 2024 – Present</i></div>
+<ul><li>Coordinate logistics for 10–20 volunteers across 6–12 youth events a year serving 100+ participants; streamlined setup, cutting setup time by about 20%</li></ul>
+<div class="row"><span><b>Menards</b> — Forklift Operator (Aug 2025 – Present); Inventory Associate (Apr – Aug 2025)</span></div>
+<ul><li>Zero safety incidents while supporting ~50–75 customer transactions per shift; cut product-retrieval time ~15–20% by reorganizing the yard layout</li></ul>
+<div class="row"><span><b>CVS</b> — Pharmacy Technician, Evergreen Park, IL</span><i>Nov 2021 – Aug 2022</i></div>
+<ul><li>Verified insurance and dosage details on ~100–150 prescriptions daily while maintaining HIPAA-compliant records</li></ul>
+
+<h2>Education &amp; Certifications</h2>
+<div class="row"><span><b>University of Illinois at Chicago</b> — B.S. in Computer Science</span><i>Expected Dec 2026</i></div>
+<div class="row"><span><b>Moraine Valley Community College</b> — A.S. in Computer Science</span><i>Dec 2023</i></div>
+<p class="sub" style="margin-top:3pt"><b>Coursework:</b> Software Design, Programming Language Design &amp; Implementation, Intro to Data Science, Database Systems (in progress)</p>
+<p><b>Certifications:</b> SDET Bootcamp, QA/Test Automation (5 months); CompTIA A+ (in progress)</p>
+</body></html>
